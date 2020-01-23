@@ -100,9 +100,9 @@ class autonomy(object):
 			## Place code here
                     speed  = 0
                     
-                    kp = 0.25
-                    ki = 0.08
-                    kd = 0.012
+                    kp = 0.22
+                    ki = 0.07
+                    kd = 0.014
                     targetUltr = 0.2
                     errorCurr = 0
                     
