@@ -92,21 +92,30 @@ class autonomy(object):
 	def runner(self):
                 errorSum = 0
                 errorLast = 0
+                distanceLast1 = 0
+                distanceLast2 = 0
+                runTime = 0
 		while not rospy.is_shutdown():
 
 			## Place code here
                     speed  = 0
-                    kp = 0.2
-                    ki = 0.2
-                    kd = 0.009
+                    
+                    kp = 0.19
+                    ki = 0.0
+                    kd = 0.002
                     targetUltr = 0.2
                     errorCurr = 0
-                       
-                    errorCurr = self.distance - targetUltr
+                    
+                    distanceCurr = self.distance
+                    distanceAver = (distanceCurr + distanceLast1 + distanceLast2)/3
+                    errorCurr = distanceAver - targetUltr
+                    distanceLast2 = distanceLast1
+                    distanceLast1 = distanceCurr
+
                     errorSum += errorCurr * 0.01
                     speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01
                                        
-                    setpoint = 0.18
+                    setpoint = 0.17
 
                     if speed > 0:
                         speed += setpoint
