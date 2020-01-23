@@ -101,8 +101,8 @@ class autonomy(object):
                     speed  = 0
                     
                     kp = 0.2
-                    ki = 0.0
-                    kd = 0.008
+                    ki = 0.05
+                    kd = 0.01
                     targetUltr = 0.2
                     errorCurr = 0
                     
@@ -115,7 +115,7 @@ class autonomy(object):
                     errorSum += errorCurr * 0.01
                     speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01
                                        
-                    setpoint = 0.17
+                    setpoint = 0.15
 
                     if speed > 0:
                         speed += setpoint
