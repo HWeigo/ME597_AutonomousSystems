@@ -1,0 +1,9 @@
+uint8 r1
+uint8 r2
+uint8 r3
+uint8 g1
+uint8 g2
+uint8 g3
+uint8 b1
+uint8 b2
+uint8 b3
