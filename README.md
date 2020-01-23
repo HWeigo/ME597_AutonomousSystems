@@ -9,7 +9,7 @@ roslaunch autonomy launcher.launch
 Run the test script (not actuating the motors).   
 ```
 cd ./launch
-roslaunch autonomy launcher.launch
+roslaunch autonomy tester.launch
 ```
 List rostopic
 ```
