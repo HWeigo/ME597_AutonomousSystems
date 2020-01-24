@@ -90,7 +90,7 @@ class autonomy(object):
 #		self.LEDpub.publish(LEDmsg)
         def forward(self, timeProcess):
                 start = time.time()
-                while (time.time() - start + timeProcess) < 1.5:
+                while (time.time() - start + timeProcess) < 1.2:
                     if self.distance > 0.5:
                         self.leftSpeed = 0.3
                         self.rightSpeed = 0.3
@@ -109,9 +109,9 @@ class autonomy(object):
         
         def turnRight(self):
                 start = time.time()
-                while (time.time() - start) < 0.65:
-                    self.leftSpeed = 0.75
-                    self.rightSpeed = -0.75
+                while (time.time() - start) < 0.53:
+                    self.leftSpeed = 0.7
+                    self.rightSpeed = -0.7
                     self.publishMotors()
                 self.leftSpeed = 0
                 self.rightSpeed = 0
@@ -146,7 +146,7 @@ class autonomy(object):
                             else:
                                 timeTotal = timeLeft 
                         self.stop()
-                        self.turnRight()
+                        self.turnLeft()
                         self.stop()
 
 			##Leave these lines at the end
