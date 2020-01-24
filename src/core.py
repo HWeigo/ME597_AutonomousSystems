@@ -88,43 +88,43 @@ class autonomy(object):
 #		LEDmsg.b3 = 255
 #		rospy.loginfo(LEDmsg)
 #		self.LEDpub.publish(LEDmsg)
+        def forward(self):
+                start = time.time()
+                while (time.time() - start) < 0.95:
+                    self.leftSpeed = 0.5
+                    self.rightSpeed = 0.5
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
 
+
+        def left(self):
+                start = time.time()
+                while (time.time() - start) < 0.54:
+                    self.leftSpeed = -0.7
+                    self.rightSpeed = 0.7
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
+
+        def stop(self):
+                start = time.time()
+                while (time.time() - start) < 0.3:
+                    self.leftSpeed = 0
+                    self.rightSpeed = 0
+                    self.publishMotors()
+                    
 	def runner(self):
-                errorSum = 0
-                errorLast = 0
-		while not rospy.is_shutdown():
-
-			## Place code here
-                    speed  = 0
-                    kp = 0.2
-                    ki = 0.2
-                    kd = 0.009
-                    targetUltr = 0.2
-                    errorCurr = 0
-                       
-                    errorCurr = self.distance - targetUltr
-                    errorSum += errorCurr * 0.01
-                    speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01
-                                       
-                    setpoint = 0.18
-
-                    if speed > 0:
-                        speed += setpoint
-                    if speed < 0:
-                        speed -= setpoint
-                    if speed > 0.3:
-                        speed  = 0.3
-                    if speed < -0.3:
-                        speed = -0.3
-                   
-                    ## ********* Measure setpoint *********
-                    #speed  = setpoint
-                    ## ************************************
-
-                    self.leftSpeed = speed
-                    self.rightSpeed = speed
-
-                    errorLast = errorCurr
+		i = 4
+                while not rospy.is_shutdown():
+                    while i > 0:
+                        self.forward()
+                        self.stop()
+                        self.left()
+                        self.stop()
+                        i -= 1
 
 			##Leave these lines at the end
 		    self.publishMotors()
