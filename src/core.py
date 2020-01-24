@@ -99,24 +99,29 @@ class autonomy(object):
 
 			## Place code here
                     speed  = 0
+                    errorCurr = 0
                     
+                    ## ********** Config paremeter ******** 
                     kp = 0.22
                     ki = 0.07
                     kd = 0.014
                     targetUltr = 0.2
-                    errorCurr = 0
+                    ## ************************************
                     
+                    ## ****** Distance average filter *****
                     distanceCurr = self.distance
                     distanceAver = (distanceCurr + distanceLast1 + distanceLast2)/3
                     errorCurr = distanceAver - targetUltr
                     distanceLast2 = distanceLast1
                     distanceLast1 = distanceCurr
+                    # *************************************
 
                     errorSum += errorCurr * 0.01
-                    speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01
+                    speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                                        
-                    setpoint = 0.15
-
+                    setpoint = 0.15 # Minimum speed for the car to start moving
+                    
+                    ## **** Restrict output to max/min ****
                     if speed > 0:
                         speed += setpoint
                     if speed < 0:
@@ -125,15 +130,16 @@ class autonomy(object):
                         speed  = 0.3
                     if speed < -0.3:
                         speed = -0.3
+                    # *************************************
                    
-                    ## ********* Measure setpoint *********
+                    ## *** Measure setpoint (for debug) ***
                     #speed  = setpoint
                     ## ************************************
 
                     self.leftSpeed = speed
                     self.rightSpeed = speed
 
-                    errorLast = errorCurr
+                    errorLast = errorCurr # Update errorLast 
 
 			##Leave these lines at the end
 		    self.publishMotors()
