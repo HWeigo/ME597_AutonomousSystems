@@ -90,13 +90,20 @@ class autonomy(object):
 #		self.LEDpub.publish(LEDmsg)
         def forward(self):
                 start = time.time()
-                while (time.time() - start) < 0.95:
-                    self.leftSpeed = 0.5
-                    self.rightSpeed = 0.5
+                while (time.time() - start) < 1.2:
+                    if self.distance > 0.5:
+                        self.leftSpeed = 0.3
+                        self.rightSpeed = 0.3
+                    else:
+                        self.leftSpeed = 0
+                        self.rightSpeed = 0
+                        self.publishMotors()
+                        return False
                     self.publishMotors()
                 self.leftSpeed = 0
                 self.rightSpeed = 0
                 self.publishMotors()
+                return True
 
         
         def turnRight(self):
@@ -111,7 +118,7 @@ class autonomy(object):
         
         def turnLeft(self):
                 start = time.time()
-                while (time.time() - start) < 0.53:
+                while (time.time() - start) < 0.6:
                     self.leftSpeed = -0.7
                     self.rightSpeed = 0.7
                     self.publishMotors()
@@ -130,7 +137,8 @@ class autonomy(object):
 		i = 4
                 while not rospy.is_shutdown():
                     while i > 0:
-                        self.forward()
+                        if self.forward() is False:
+                            break
                         self.stop()
                         self.turnLeft()
                         self.stop()
