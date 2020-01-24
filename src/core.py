@@ -98,10 +98,20 @@ class autonomy(object):
                 self.rightSpeed = 0
                 self.publishMotors()
 
-
-        def left(self):
+        
+        def turnRight(self):
                 start = time.time()
-                while (time.time() - start) < 0.54:
+                while (time.time() - start) < 0.53:
+                    self.leftSpeed = 0.7
+                    self.rightSpeed = -0.7
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
+        
+        def turnLeft(self):
+                start = time.time()
+                while (time.time() - start) < 0.53:
                     self.leftSpeed = -0.7
                     self.rightSpeed = 0.7
                     self.publishMotors()
@@ -122,7 +132,7 @@ class autonomy(object):
                     while i > 0:
                         self.forward()
                         self.stop()
-                        self.left()
+                        self.turnLeft()
                         self.stop()
                         i -= 1
 
