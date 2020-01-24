@@ -102,9 +102,9 @@ class autonomy(object):
                     errorCurr = 0
                     
                     ## ********** Config paremeter ******** 
-                    kp = 0.275
-                    ki = 0.075
-                    kd = 0.015
+                    kp = 0.31
+                    ki = 0.18
+                    kd = 0.0145
                     targetUltr = 0.195
                     ## ************************************
                     
@@ -117,6 +117,13 @@ class autonomy(object):
                     # *************************************
 
                     errorSum += errorCurr * 0.01
+
+                    integralBound = 0.5
+                    if errorSum > integralBound:
+                        errosrSum = integralBound
+                    if errorSum < (-1 * integralBound):
+                        errorSum = -1 * integralBound
+
                     speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                                        
                     setpoint = 0.11 # Minimum speed for the car to start moving
@@ -125,11 +132,12 @@ class autonomy(object):
                     if speed > 0:
                         speed += setpoint
                     if speed < 0:
-                        speed -= 0.145
-                    if speed > 0.3:
-                        speed  = 0.3
-                    if speed < -0.3:
-                        speed = -0.3
+                        speed -= 0.15
+
+                    #if speed > 0.3:
+                    #    speed  = 0.3
+                    #if speed < -0.3:
+                    #    speed = -0.3
                     # *************************************
                    
                     ## *** Measure setpoint (for debug) ***
