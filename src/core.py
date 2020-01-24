@@ -89,6 +89,9 @@ class autonomy(object):
 #		rospy.loginfo(LEDmsg)
 #		self.LEDpub.publish(LEDmsg)
 
+        #def distanceMaintenance(self, targetDistance):
+
+
 	def runner(self):
                 errorSum = 0
                 errorLast = 0
@@ -102,9 +105,9 @@ class autonomy(object):
                     errorCurr = 0
                     
                     ## ********** Config paremeter ******** 
-                    kp = 0.31
-                    ki = 0.18
-                    kd = 0.0145
+                    kp = 0.35
+                    ki = 0.6
+                    kd = 0.020
                     targetUltr = 0.195
                     ## ************************************
                     
@@ -118,7 +121,7 @@ class autonomy(object):
 
                     errorSum += errorCurr * 0.01
 
-                    integralBound = 0.5
+                    integralBound = 0.3
                     if errorSum > integralBound:
                         errosrSum = integralBound
                     if errorSum < (-1 * integralBound):
@@ -126,14 +129,16 @@ class autonomy(object):
 
                     speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                                        
-                    setpoint = 0.11 # Minimum speed for the car to start moving
-                    
-                    ## **** Restrict output to max/min ****
+                                        
+                    ## ******* Add speed setpoint *********
+                    # Minimum speed for the car to start moving
                     if speed > 0:
-                        speed += setpoint
+                        speed += 0.11
                     if speed < 0:
-                        speed -= 0.15
-
+                        speed -= 0.155
+                    ## ************************************ 
+                    
+                    ## ******** Restrict output ***********
                     #if speed > 0.3:
                     #    speed  = 0.3
                     #if speed < -0.3:
