@@ -102,8 +102,8 @@ class autonomy(object):
                     errorCurr = 0
                     
                     ## ********** Config paremeter ******** 
-                    kp = 0.27
-                    ki = 0.08
+                    kp = 0.275
+                    ki = 0.075
                     kd = 0.015
                     targetUltr = 0.195
                     ## ************************************
@@ -125,7 +125,7 @@ class autonomy(object):
                     if speed > 0:
                         speed += setpoint
                     if speed < 0:
-                        speed -= setpoint
+                        speed -= 0.145
                     if speed > 0.3:
                         speed  = 0.3
                     if speed < -0.3:
@@ -133,7 +133,7 @@ class autonomy(object):
                     # *************************************
                    
                     ## *** Measure setpoint (for debug) ***
-                    #speed  = setpoint
+                    #speed  = -0.13
                     ## ************************************
 
                     self.leftSpeed = speed
