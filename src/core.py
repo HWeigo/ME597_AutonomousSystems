@@ -102,10 +102,10 @@ class autonomy(object):
                     errorCurr = 0
                     
                     ## ********** Config paremeter ******** 
-                    kp = 0.22
-                    ki = 0.07
-                    kd = 0.014
-                    targetUltr = 0.2
+                    kp = 0.27
+                    ki = 0.08
+                    kd = 0.015
+                    targetUltr = 0.195
                     ## ************************************
                     
                     ## ****** Distance average filter *****
@@ -119,7 +119,7 @@ class autonomy(object):
                     errorSum += errorCurr * 0.01
                     speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                                        
-                    setpoint = 0.15 # Minimum speed for the car to start moving
+                    setpoint = 0.11 # Minimum speed for the car to start moving
                     
                     ## **** Restrict output to max/min ****
                     if speed > 0:
