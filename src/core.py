@@ -169,23 +169,26 @@ class autonomy(object):
 
 
         def runner(self):
+                distances = [0,0,1,0,0]
+                panAngle = [-0.6, -0.3, 0, 0.3, 0.6] 
                 while not rospy.is_shutdown():
                     
-                    while self.distance > 0.5:
-                        self.leftSpeed = 0.3
-                        self.rightSpeed = 0.3
+                    for i in range(len(panAngle)):
+                        self.pan = panAngle[i]
+                        self.publishServo()
+                        time.sleep(0.1)
+                        distances[i] = self.distance
+                        distances[2] += 0.3
+                        nextstep = distances.index(max(distances)) - 2
+                        self.leftSpeed = 0.2 + nextstep*0.2
+                        self.rightSpeed = 0.2 - nextstep*0.2
                         self.publishMotors()
-                    self.stop()
 
-                    if self.checkObstacle() is 1:
-                        self.turnLeft()
-                    else:
-                        self.turnRight()
 
-			##Leave these lines at the end
+		    ##Leave these lines at the end
 		    self.publishMotors()
 		    self.publishServo()
-#			self.publishLED()
+#		    self.publishLED()
 		    self.rate.sleep()
 
 
