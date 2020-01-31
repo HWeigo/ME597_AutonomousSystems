@@ -109,7 +109,7 @@ class autonomy(object):
         
         def turnRight(self):
                 start = time.time()
-                while (time.time() - start) < 0.65:
+                while (time.time() - start) < 0.25:
                     self.leftSpeed = 0.75
                     self.rightSpeed = -0.75
                     self.publishMotors()
@@ -119,7 +119,7 @@ class autonomy(object):
         
         def turnLeft(self):
                 start = time.time()
-                while (time.time() - start) < 0.6:
+                while (time.time() - start) < 0.25:
                     self.leftSpeed = -0.7
                     self.rightSpeed = 0.7
                     self.publishMotors()
@@ -171,10 +171,12 @@ class autonomy(object):
         def runner(self):
                 while not rospy.is_shutdown():
                     
-                    if self.checkObstacle() is 1:
-                        self.turnLeft()
-                    else:
-                        self.turnRight()
+                    #if self.checkObstacle() is 1:
+                    #    self.turnLeft()
+                    #else:
+                    #    self.turnRight()
+                    self.turnLeft()
+                    time.sleep(1)
 
 			##Leave these lines at the end
 		    self.publishMotors()
