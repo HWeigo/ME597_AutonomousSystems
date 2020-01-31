@@ -171,12 +171,16 @@ class autonomy(object):
         def runner(self):
                 while not rospy.is_shutdown():
                     
-                    #if self.checkObstacle() is 1:
-                    #    self.turnLeft()
-                    #else:
-                    #    self.turnRight()
-                    self.turnLeft()
-                    time.sleep(1)
+                    while self.distance > 0.5:
+                        self.leftSpeed = 0.3
+                        self.rightSpeed = 0.3
+                        self.publishMotors()
+                    self.stop()
+
+                    if self.checkObstacle() is 1:
+                        self.turnLeft()
+                    else:
+                        self.turnRight()
 
 			##Leave these lines at the end
 		    self.publishMotors()
