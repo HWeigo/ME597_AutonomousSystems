@@ -170,18 +170,34 @@ class autonomy(object):
 
         def runner(self):
                 distances = [0,0,1,0,0]
-                panAngle = [-0.6, -0.3, 0, 0.3, 0.6] 
+                panAngle_l2r = [-0.7, -0.35, 0, 0.35, 0.7]
+                panAngle_r2l = [0.7, 0.35, 0, -0.35, -0.7]
+                constSpeed = 0.17
+                stepSpeed = 0.22
+                forwardBonus = 0.05
+                samplingTime = 0.2
                 while not rospy.is_shutdown():
                     
-                    for i in range(len(panAngle)):
-                        self.pan = panAngle[i]
+                    for i in range(len(panAngle_l2r)):
+                        self.pan = panAngle_l2r[i]
                         self.publishServo()
-                        time.sleep(0.1)
+                        time.sleep(samplingTime)
                         distances[i] = self.distance
-                        distances[2] += 0.3
+                        distances[2] += forwardBonus
                         nextstep = distances.index(max(distances)) - 2
-                        self.leftSpeed = 0.2 + nextstep*0.2
-                        self.rightSpeed = 0.2 - nextstep*0.2
+                        self.leftSpeed = constSpeed - nextstep*stepSpeed
+                        self.rightSpeed = constSpeed + nextstep*stepSpeed
+                        self.publishMotors()
+                    
+                    for i in range(len(panAngle_r2l)):
+                        self.pan = panAngle_r2l[i]
+                        self.publishServo()
+                        time.sleep(samplingTime)
+                        distances[4-i] = self.distance
+                        distances[2] += forwardBonus
+                        nextstep = distances.index(max(distances)) - 2
+                        self.leftSpeed = constSpeed - nextstep*stepSpeed
+                        self.rightSpeed = constSpeed + nextstep*stepSpeed
                         self.publishMotors()
 
 
