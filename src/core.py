@@ -134,6 +134,7 @@ class autonomy(object):
                     self.rightSpeed = 0
                     self.publishMotors()
                    
+        # discrete obstacle avoidance
         def checkObstacle(self):
 
                 leftDistance = 0
@@ -169,35 +170,43 @@ class autonomy(object):
 
 
         def runner(self):
-                distances = [0,0,1,0,0]
-                panAngle_l2r = [-0.7, -0.35, 0, 0.35, 0.7]
-                panAngle_r2l = [0.7, 0.35, 0, -0.35, -0.7]
+                distances = [0,0,0]
+                panAngle_l2r = [-0.6, 0, 0.6]
+                panAngle_r2l = [0.6, 0, -0.6]
                 constSpeed = 0.17
-                stepSpeed = 0.22
+                stepSpeed = constSpeed * 2
                 forwardBonus = 0.05
-                samplingTime = 0.2
+                samplingTime = 0.15
                 while not rospy.is_shutdown():
-                    
+
+                   # swapping sensor from left to right 
                     for i in range(len(panAngle_l2r)):
                         self.pan = panAngle_l2r[i]
                         self.publishServo()
                         time.sleep(samplingTime)
+
+                        # measure distance and save the value to corrspponding position
                         distances[i] = self.distance
-                        distances[2] += forwardBonus
-                        nextstep = distances.index(max(distances)) - 2
-                        self.leftSpeed = constSpeed - nextstep*stepSpeed
-                        self.rightSpeed = constSpeed + nextstep*stepSpeed
+                        distances[1] += forwardBonus
+                        
+                        # find the direction with largest distacnes
+                        nextstep = distances.index(max(distances)) - 1 
+                        
+                        # calculate left and right speed
+                        self.leftSpeed = constSpeed + nextstep*stepSpeed
+                        self.rightSpeed = constSpeed - nextstep*stepSpeed
                         self.publishMotors()
                     
+                    # swapping sensor from right to left
                     for i in range(len(panAngle_r2l)):
                         self.pan = panAngle_r2l[i]
                         self.publishServo()
                         time.sleep(samplingTime)
-                        distances[4-i] = self.distance
-                        distances[2] += forwardBonus
-                        nextstep = distances.index(max(distances)) - 2
-                        self.leftSpeed = constSpeed - nextstep*stepSpeed
-                        self.rightSpeed = constSpeed + nextstep*stepSpeed
+                        distances[2-i] = self.distance
+                        distances[1] += forwardBonus
+                        nextstep = distances.index(max(distances)) - 1
+                        self.leftSpeed = constSpeed + nextstep*stepSpeed
+                        self.rightSpeed = constSpeed - nextstep*stepSpeed
                         self.publishMotors()
 
 
