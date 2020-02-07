@@ -30,7 +30,8 @@ class autonomy(object):
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
-		#self.LEDpub = rospy.Publisher('leds', leds, queue_size=10)
+	        self.blobpub = rospy.Publisher('imageProc',Image, queue_size=10)
+                #self.LEDpub = rospy.Publisher('leds', leds, queue_size=10)
 
 
 		#Create Subscriber callbacks
@@ -50,11 +51,48 @@ class autonomy(object):
 				print(e)
 
 			##Place image processing code here!
-			#cv2.imwrite('test.jpg',frame)
+                        
+                        # Setup SimpleBlobDetector parameters.
+                        params = cv2.SimpleBlobDetector_Params()
+
+                        # Change thresholds
+                        params.minThreshold = 10
+                        params.maxThreshold = 200
+
+
+                        # Filter by Area.
+                        params.filterByArea = True
+                        params.minArea = 1500
+
+                        # Filter by Circularity
+                        params.filterByCircularity = True
+                        params.minCircularity = 0.1
+
+                        # Filter by Convexity
+                        params.filterByConvexity = True
+                        params.minConvexity = 0.87
+                            
+                        # Filter by Inertia
+                        params.filterByInertia = True
+                        params.minInertiaRatio = 0.01
+
+                        # Create a detector with the parameters
+                        ver = (cv2.__version__).split('.')
+                        if int(ver[0]) < 3 :
+                            detector = cv2.SimpleBlobDetector(params)
+                        else : 
+                            detector = cv2.SimpleBlobDetector_create(params)
+                        # Set up the detector with default parameters.
+                        # detector = cv2.SimpleBlobDetector()
+                          
+                        # Detect blobs.
+                        keypoints = detector.detect(frame)
+                           
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(frame, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
 
 
 		#Subscribe to topics
-		rospy.Subscriber('raspicam_node/image',Image,imageProcessing)
+		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
 		rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
 
@@ -179,35 +217,35 @@ class autonomy(object):
                 samplingTime = 0.15
                 while not rospy.is_shutdown():
 
-                   # swapping sensor from left to right 
-                    for i in range(len(panAngle_l2r)):
-                        self.pan = panAngle_l2r[i]
-                        self.publishServo()
-                        time.sleep(samplingTime)
+                  # # swapping sensor from left to right 
+                  #  for i in range(len(panAngle_l2r)):
+                  #      self.pan = panAngle_l2r[i]
+                  #      self.publishServo()
+                  #      time.sleep(samplingTime)
 
-                        # measure distance and save the value to corrspponding position
-                        distances[i] = self.distance
-                        distances[1] += forwardBonus
-                        
-                        # find the direction with largest distacnes
-                        nextstep = distances.index(max(distances)) - 1 
-                        
-                        # calculate left and right speed
-                        self.leftSpeed = constSpeed + nextstep*stepSpeed
-                        self.rightSpeed = constSpeed - nextstep*stepSpeed
-                        self.publishMotors()
-                    
-                    # swapping sensor from right to left
-                    for i in range(len(panAngle_r2l)):
-                        self.pan = panAngle_r2l[i]
-                        self.publishServo()
-                        time.sleep(samplingTime)
-                        distances[2-i] = self.distance
-                        distances[1] += forwardBonus
-                        nextstep = distances.index(max(distances)) - 1
-                        self.leftSpeed = constSpeed + nextstep*stepSpeed
-                        self.rightSpeed = constSpeed - nextstep*stepSpeed
-                        self.publishMotors()
+                  #      # measure distance and save the value to corrspponding position
+                  #      distances[i] = self.distance
+                  #      distances[1] += forwardBonus
+                  #      
+                  #      # find the direction with largest distacnes
+                  #      nextstep = distances.index(max(distances)) - 1 
+                  #      
+                  #      # calculate left and right speed
+                  #      self.leftSpeed = constSpeed + nextstep*stepSpeed
+                  #      self.rightSpeed = constSpeed - nextstep*stepSpeed
+                  #      self.publishMotors()
+                  #  
+                  #  # swapping sensor from right to left
+                  #  for i in range(len(panAngle_r2l)):
+                  #      self.pan = panAngle_r2l[i]
+                  #      self.publishServo()
+                  #      time.sleep(samplingTime)
+                  #      distances[2-i] = self.distance
+                  #      distances[1] += forwardBonus
+                  #      nextstep = distances.index(max(distances)) - 1
+                  #      self.leftSpeed = constSpeed + nextstep*stepSpeed
+                  #      self.rightSpeed = constSpeed - nextstep*stepSpeed
+                  #      self.publishMotors()
 
 
 		    ##Leave these lines at the end
