@@ -5,6 +5,8 @@ import rospy
 import time
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from geometry_msgs.msg import TransformStamped, Twist
+from fiducial_msgs.msg import FiducialTransform, FiducialTransformArray
 import cv2
 from autonomy.msg import motors, lines, distance, servos #, leds
 
@@ -92,10 +94,23 @@ class autonomy(object):
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(frame, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
 
 
+		def fiducialNav(data):
+		        for m in data.transforms:
+			        id = m.fiducial_id
+				trans = m.transform.translation
+				print "Fid %d, %lf, %lf, %lf \n" & (id, trans.x, trans.y, trans.z)
+				t = TransformStamped()
+
+			
+			
+			
+
+
 		#Subscribe to topics
 		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
 		rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
+		rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(10)
