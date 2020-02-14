@@ -66,7 +66,8 @@ class autonomy(object):
 
                         # Filter by Circularity
                         params.filterByCircularity = True
-                        params.minCircularity = 0.1
+                        params.minCircularity = 0.5
+                        params.maxCircularity = 0.8
 
                         # Filter by Convexity
                         params.filterByConvexity = True
