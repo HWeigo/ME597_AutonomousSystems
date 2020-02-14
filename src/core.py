@@ -95,16 +95,12 @@ class autonomy(object):
 
 
 		def fiducialNav(data):
+                        print "FiducialNav callback"
 		        for m in data.transforms:
 			        id = m.fiducial_id
 				trans = m.transform.translation
-				print "Fid %d, %lf, %lf, %lf \n" & (id, trans.x, trans.y, trans.z)
-				t = TransformStamped()
-
-			
-			
-			
-
+				print "Fid %d, %lf, %lf, %lf \n" % (id, trans.x, trans.y, trans.z)
+				t = TransformStamped()	
 
 		#Subscribe to topics
 		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
