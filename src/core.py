@@ -43,10 +43,10 @@ class autonomy(object):
 			self.rightLine = data.rightLine
 
 		def distanceCallback(data):
-			self.distance = data.distance
+			#self.distance = data.distance
+                        return
 
-
-		def imageProcessing(data):
+                def imageProcessing(data):
 			try:
 				frame=self.bridge.imgmsg_to_cv2(data,desired_encoding="passthrough")
 			except CvBridgeError as e:
@@ -99,8 +99,9 @@ class autonomy(object):
 		        for m in data.transforms:
 			        id = m.fiducial_id
 				trans = m.transform.translation
-				print "Fid %d, %lf, %lf, %lf \n" % (id, trans.x, trans.y, trans.z)
-				t = TransformStamped()	
+                                rot = m.transform.rotation
+                                print "Fid trans x, y, z:  %d, %lf, %lf, %lf \n" % (id, trans.x, trans.y, trans.z)
+                                print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
 
 		#Subscribe to topics
 		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
@@ -115,14 +116,14 @@ class autonomy(object):
 		motorMsg = motors()
 		motorMsg.leftSpeed = self.leftSpeed
 		motorMsg.rightSpeed = self.rightSpeed
-		rospy.loginfo(motorMsg)
+		#rospy.loginfo(motorMsg)
 		self.motorPub.publish(motorMsg)
 
 	def publishServo(self):
 		servoMsg = servos()
 		servoMsg.pan = self.pan
 		servoMsg.tilt = self.tilt
-		rospy.loginfo(servoMsg)
+		#rospy.loginfo(servoMsg)
 		self.servoPub.publish(servoMsg)
 
 #	def publishLED(self):
@@ -220,44 +221,61 @@ class autonomy(object):
 
 
         def runner(self):
-                distances = [0,0,0]
-                panAngle_l2r = [-0.6, 0, 0.6]
-                panAngle_r2l = [0.6, 0, -0.6]
-                constSpeed = 0.17
-                stepSpeed = constSpeed * 2
-                forwardBonus = 0.05
-                samplingTime = 0.15
+#                errorSum = 0;
+#	        errorLast = 0
+#                distanceLast1 = 0
+#                distanceLast2 = 0
+#                runTime = 0
                 while not rospy.is_shutdown():
-
-                  # # swapping sensor from left to right 
-                  #  for i in range(len(panAngle_l2r)):
-                  #      self.pan = panAngle_l2r[i]
-                  #      self.publishServo()
-                  #      time.sleep(samplingTime)
-
-                  #      # measure distance and save the value to corrspponding position
-                  #      distances[i] = self.distance
-                  #      distances[1] += forwardBonus
-                  #      
-                  #      # find the direction with largest distacnes
-                  #      nextstep = distances.index(max(distances)) - 1 
-                  #      
-                  #      # calculate left and right speed
-                  #      self.leftSpeed = constSpeed + nextstep*stepSpeed
-                  #      self.rightSpeed = constSpeed - nextstep*stepSpeed
-                  #      self.publishMotors()
-                  #  
-                  #  # swapping sensor from right to left
-                  #  for i in range(len(panAngle_r2l)):
-                  #      self.pan = panAngle_r2l[i]
-                  #      self.publishServo()
-                  #      time.sleep(samplingTime)
-                  #      distances[2-i] = self.distance
-                  #      distances[1] += forwardBonus
-                  #      nextstep = distances.index(max(distances)) - 1
-                  #      self.leftSpeed = constSpeed + nextstep*stepSpeed
-                  #      self.rightSpeed = constSpeed - nextstep*stepSpeed
-                  #      self.publishMotors()
+#                    forward_speed  = 0
+#                    errorCurr = 0
+#                    
+#                    ## ********** Config paremeter ******** 
+#                    kp = 0.35
+#                    ki = 0.6
+#                    kd = 0.020
+#                    targetUltr = 0.195
+#                    ## ************************************
+#                    
+#                    ## ****** Distance average filter *****
+#                    distanceCurr = self.distance
+#                    distanceAver = (distanceCurr + distanceLast1 + distanceLast2)/3
+#                    errorCurr = distanceAver - targetUltr
+#                    distanceLast2 = distanceLast1
+#                    distanceLast1 = distanceCurr
+#                    # *************************************
+#
+#                    errorSum += errorCurr * 0.01
+#
+#                    integralBound = 0.3
+#                    if errorSum > integralBound:
+#                        errosrSum = integralBound
+#                    if errorSum < (-1 * integralBound):
+#                        errorSum = -1 * integralBound
+#                    forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
+#                                       
+#                                        
+#                    ## ******* Add forward_speed setpoint *********
+#                    # Minimum forward_speed for the car to start moving
+#                    if forward_speed > 0:
+#                        forward_speed += 0.11
+#                    if forward_speed < 0:
+#                        forward_speed -= 0.155
+#                    ## ************************************ 
+#                    
+#                    ## ******** Restrict output ***********
+#                    #if forward_speed > 0.3
+#                    #    forward_speed  = 0.3
+#                    #if forward_speed < -0.3:
+#                    #    forward_speed = -0.3
+#                    # *************************************
+#                   
+#                    ## *** Measure setpoint (for debug) ***
+#                    #forward_speed  = -0.13
+#                    ## ************************************
+#
+#                    self.leftforward_speed = forward_speed
+#                    self.rightforward_speed = forward_speed
 
 
 		    ##Leave these lines at the end
