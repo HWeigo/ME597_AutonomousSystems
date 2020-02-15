@@ -31,6 +31,7 @@ class autonomy(object):
 		self.bridge = CvBridge()
                 self.trans_xz = [0,0]
                 self.rot_z = 0
+                self.isArUcoDetect = False
 
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
@@ -98,6 +99,7 @@ class autonomy(object):
 
 
 		def fiducialNav(data):
+                        id = -1
                         print "FiducialNav callback"
 		        for m in data.transforms:
 			        id = m.fiducial_id
@@ -107,6 +109,13 @@ class autonomy(object):
                                 print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
                                 self.trans_xz = [trans.x, trans.z]
                                 self.rot_z = rot.z
+                                
+                        if id is 2:
+                                self.isArUcoDetect = True
+                        else:
+                                self.isArUcoDetect = False
+
+
 
 		#Subscribe to topics
 		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
@@ -231,21 +240,30 @@ class autonomy(object):
                 rotation_matrix = np.array([(math.cos(theta), -math.sin(theta)),(math.sin(theta), math.cos(theta))])
                 print(rotation_matrix)
                 destination = np.array(destination)
-                print(destination)
+                #print(destination)
                 destination_coordinate = rotation_matrix.dot(destination) + np.array([[trans_xz[0]], [trans_xz[1]]])
                 print(destination_coordinate)
                 rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
                 phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
-                return float(rho), math.degrees(phi) - 90
+                if math.degrees(phi) < 180 and math.degrees(phi) > 0: 
+                    return float(rho), math.degrees(phi) - 90
+                else:
+                    return -float(rho), math.degrees(phi) + 90
 
         def runner(self):
 #                errorSum = 0;
 #	        errorLast = 0
-#                distanceLast1 = 0
-#                distanceLast2 = 0
+                rhoLast1 = 0
+                rhoLast2 = 0
+                phiLast1 = 0
+                phiLast2 = 0
 #                runTime = 0
                 while not rospy.is_shutdown():
-                    [rho, phi] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
+                    if self.isArUcoDetect is True:
+                        [rhoCurr, phiCurr] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
+                        print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
+                        rho_average = (rhoCurr + rhoLast1 + rhoLast2)/3
+                        phi_average = (phiCurr + phiLast1 + phiLast2)/3
 #                    forward_speed  = 0
 #                    errorCurr = 0
 #                    
