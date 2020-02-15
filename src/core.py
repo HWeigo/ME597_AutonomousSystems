@@ -2,6 +2,7 @@
 
 import numpy as np
 import rospy
+import math
 import time
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -28,6 +29,8 @@ class autonomy(object):
 		self.pan = 0
 		self.tilt = 0
 		self.bridge = CvBridge()
+                self.trans_xz = [0,0]
+                self.rot_z = 0
 
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
@@ -100,8 +103,10 @@ class autonomy(object):
 			        id = m.fiducial_id
 				trans = m.transform.translation
                                 rot = m.transform.rotation
-                                print "Fid trans x, y, z:  %d, %lf, %lf, %lf \n" % (id, trans.x, trans.y, trans.z)
+                                print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
                                 print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
+                                self.trans_xz = [trans.x, trans.z]
+                                self.rot_z = rot.z
 
 		#Subscribe to topics
 		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
@@ -184,7 +189,7 @@ class autonomy(object):
                     self.leftSpeed = 0
                     self.rightSpeed = 0
                     self.publishMotors()
-                   
+
         # discrete obstacle avoidance
         def checkObstacle(self):
 
@@ -219,6 +224,19 @@ class autonomy(object):
                 else:
                     return -1
 
+        def frame_transformation(self, destination, trans_xz, rot_z):
+                theta = -108.9 * rot_z - 0.9179  # calculate the angle between two frames (degree)
+                theta = math.radians(theta)  # convert the angle into radians
+                print(theta)
+                rotation_matrix = np.array([(math.cos(theta), -math.sin(theta)),(math.sin(theta), math.cos(theta))])
+                print(rotation_matrix)
+                destination = np.array(destination)
+                print(destination)
+                destination_coordinate = rotation_matrix.dot(destination) + np.array([[trans_xz[0]], [trans_xz[1]]])
+                print(destination_coordinate)
+                rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
+                phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
+                return float(rho), math.degrees(phi) - 90
 
         def runner(self):
 #                errorSum = 0;
@@ -227,6 +245,7 @@ class autonomy(object):
 #                distanceLast2 = 0
 #                runTime = 0
                 while not rospy.is_shutdown():
+                    [rho, phi] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
 #                    forward_speed  = 0
 #                    errorCurr = 0
 #                    
