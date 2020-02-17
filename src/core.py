@@ -257,20 +257,32 @@ class autonomy(object):
                 rhoLast2 = 0
                 phiLast1 = 0
                 phiLast2 = 0
+                alphaLast1 = 0
+                alphaLast2 = 0
 #                runTime = 0
                 while not rospy.is_shutdown():
                     if self.isArUcoDetect is True:
                         [rhoCurr, phiCurr] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
+                        alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
+
                         # print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
                         rho_average = (rhoCurr + rhoLast1 + rhoLast2)/3
                         phi_average = (phiCurr + phiLast1 + phiLast2)/3
-                        print "rho: %f, phi: %f\n" % (rho_average, phi_average)
+                        alpha_average = (alphaCurr + alphaLast1 + alphaLast2)/3
+
+                        rhoLast2 = rhoLast1
+                        rhoLast1 = rhoCurr
+                        phiLast2 = phiLast1
+                        phiLast1 = phiCurr
+                        alphaLast2 = alphaLast1
+                        alphaLast1 = alphaCurr
+                        print "rho: %f\n, phi: %f\n, alpha: %f\n" % (rho_average, phi_average, alpha_average)
 
                         forward_speed  = 0
                         errorCurr = 0
                     
                         ## ********** Config paremeter ******** 
-                        kp = 0.7
+                        kp = 0.6
                         ki = 0.6
                         kd = 0.020
                         targetUltr = 0.195
@@ -302,25 +314,37 @@ class autonomy(object):
                             forward_speed = -0.23
                         #*************************************
 
+
                         if phi_average > 25:
                             phi_average = 25
                         if phi_average < -25:
                             phi_average = -25
-                        ks = 0.035
+                        ks = 0.03
                         steering_speed = ks * phi_average 
+                        
+                        kc = 0.03
+                        if alpha_average > 15 or alpha_average < -15:
+                            correction_speed = kc * alpha_average
+                        else:
+                            correction_speed = 0
 
                         # ******** Restrict output ***********
-                        if steering_speed > 0.15:
-                            steering_speed  = 0.15
-                        if steering_speed < -0.15:
-                            steering_speed = -0.15
+                        if steering_speed > 0.1:
+                            steering_speed  = 0.1
+                        if steering_speed < -0.1:
+                            steering_speed = -0.1
+
+                        if correction_speed > 0.2:
+                            correction_speed = 0.2
+                        if correction_speed < -0.2:
+                            correction_speed = -0.2
                         #*************************************
 
-                        print "forward speed: %f\n" % forward_speed
-                        print "steering speed: %f\n" % steering_speed
+                        #print "forward speed: %f\n" % forward_speed
+                        #print "steering speed: %f\n" % steering_speed
 
-                        self.leftSpeed = forward_speed  - steering_speed
-                        self.rightSpeed = forward_speed + steering_speed
+                        self.leftSpeed = forward_speed  - steering_speed + correction_speed 
+                        self.rightSpeed = forward_speed + steering_speed - correction_speed 
 
 
 		    ##Leave these lines at the end
