@@ -264,6 +264,7 @@ class autonomy(object):
                     if self.isArUcoDetect is True:
                         [rhoCurr, phiCurr] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
                         alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
+                        alphaCurr = math.degrees(alphaCurr) - 90
 
                         # print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
                         rho_average = (rhoCurr + rhoLast1 + rhoLast2)/3
@@ -282,8 +283,8 @@ class autonomy(object):
                         errorCurr = 0
                     
                         ## ********** Config paremeter ******** 
-                        kp = 0.6
-                        ki = 0.6
+                        kp = 0.8
+                        ki = 0.0
                         kd = 0.020
                         targetUltr = 0.195
                         ## ************************************
@@ -299,19 +300,13 @@ class autonomy(object):
                         forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                         errorLast = errorCurr                                       
                                         
-                        ## ******* Add forward_speed setpoint *********
-                        # Minimum forward_speed for the car to start moving
-                        if forward_speed > 0:
-                            forward_speed += 0.10
-                        if forward_speed < 0:
-                            forward_speed -= 0.10
-                        ## ************************************ 
-                        
+                                               
                         # ******** Restrict output ***********
-                        if forward_speed > 0.23:
-                            forward_speed  = 0.23
-                        if forward_speed < -0.23:
-                            forward_speed = -0.23
+                        forward_upper_bound = 0.13
+                        if forward_speed > forward_upper_bound:
+                            forward_speed  = forward_upper_bound 
+                        if forward_speed < -forward_upper_bound:
+                            forward_speed = -forward_upper_bound 
                         #*************************************
 
 
@@ -319,33 +314,54 @@ class autonomy(object):
                             phi_average = 25
                         if phi_average < -25:
                             phi_average = -25
-                        ks = 0.03
-                        steering_speed = ks * phi_average 
+                        ks = 0.05
                         
-                        kc = 0.03
+                        kc = 0.1
                         if alpha_average > 15 or alpha_average < -15:
-                            correction_speed = kc * alpha_average
+                            steering_speed = kc * alpha_average
                         else:
-                            correction_speed = 0
+                            steering_speed = ks * phi_average 
 
                         # ******** Restrict output ***********
-                        if steering_speed > 0.1:
-                            steering_speed  = 0.1
-                        if steering_speed < -0.1:
-                            steering_speed = -0.1
+                        if steering_speed > 0.13:
+                            steering_speed  = 0.13
+                        if steering_speed < -0.13:
+                            steering_speed = -0.13
 
-                        if correction_speed > 0.2:
-                            correction_speed = 0.2
-                        if correction_speed < -0.2:
-                            correction_speed = -0.2
+                       # if correction_speed > 0.2:
+                       #     correction_speed = 0.2
+                       # if correction_speed < -0.2:
+                       #     correction_speed = -0.2
                         #*************************************
 
-                        #print "forward speed: %f\n" % forward_speed
-                        #print "steering speed: %f\n" % steering_speed
+                        print "forward speed: %f\n" % forward_speed
+                        print "steering speed: %f\n" % steering_speed
 
-                        self.leftSpeed = forward_speed  - steering_speed + correction_speed 
-                        self.rightSpeed = forward_speed + steering_speed - correction_speed 
+                        self.leftSpeed = forward_speed  - steering_speed 
+                        self.rightSpeed = forward_speed + steering_speed 
 
+                        # Minimum forward_speed for the car to start moving
+                        speed_upper_bound = 0.28
+                        speed_lower_bound = 0.10
+
+                        if self.leftSpeed > 0:
+                            self.leftSpeed += speed_lower_bound 
+                        if self.leftSpeed < 0:
+                            self.leftSpeed -= speed_lower_bound 
+                        if self.leftSpeed > speed_upper_bound:
+                            self.leftSpeed = speed_upper_bound
+                        if self.leftSpeed < -speed_upper_bound:
+                            self.leftSpeed = -speed_upper_bound
+
+                        if self.rightSpeed > 0:
+                            self.rightSpeed += speed_lower_bound 
+                        if self.rightSpeed < 0:
+                            self.rightSpeed -= speed_lower_bound 
+                        if self.rightSpeed > speed_upper_bound:
+                            self.rightSpeed = speed_upper_bound 
+                        if self.rightSpeed < -speed_upper_bound:
+                            self.rightSpeed = -speed_upper_bound 
+                        ## ************************************ 
 
 		    ##Leave these lines at the end
 	    	        self.publishMotors()
