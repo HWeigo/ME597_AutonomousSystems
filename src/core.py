@@ -99,22 +99,22 @@ class autonomy(object):
 
 
 		def fiducialNav(data):
-                        id = -1
-                        print "FiducialNav callback"
-		        for m in data.transforms:
-			        id = m.fiducial_id
-				trans = m.transform.translation
-                                rot = m.transform.rotation
-                                print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
-                                print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
-                                self.trans_xz = [trans.x, trans.z]
-                                self.rot_z = rot.z
+                    id = -1
+                    print "FiducialNav callback"
+                    self.isArUcoDetect = False
+
+		    for m in data.transforms:
+			id = m.fiducial_id
+			trans = m.transform.translation
+                        rot = m.transform.rotation
+                        print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
+                        print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
+                        self.trans_xz = [trans.x, trans.z]
+                        self.rot_z = rot.z
                                 
                         if id is 2:
                                 self.isArUcoDetect = True
-                        else:
-                                self.isArUcoDetect = False
-
+                                
 
 
 		#Subscribe to topics
@@ -130,7 +130,7 @@ class autonomy(object):
 		motorMsg = motors()
 		motorMsg.leftSpeed = self.leftSpeed
 		motorMsg.rightSpeed = self.rightSpeed
-		#rospy.loginfo(motorMsg)
+		rospy.loginfo(motorMsg)
 		self.motorPub.publish(motorMsg)
 
 	def publishServo(self):
@@ -251,8 +251,8 @@ class autonomy(object):
                     return -float(rho), math.degrees(phi) + 90
 
         def runner(self):
-#                errorSum = 0;
-#	        errorLast = 0
+                errorSum = 0;
+	        errorLast = 0
                 rhoLast1 = 0
                 rhoLast2 = 0
                 phiLast1 = 0
@@ -261,63 +261,72 @@ class autonomy(object):
                 while not rospy.is_shutdown():
                     if self.isArUcoDetect is True:
                         [rhoCurr, phiCurr] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
-                        print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
+                        # print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
                         rho_average = (rhoCurr + rhoLast1 + rhoLast2)/3
                         phi_average = (phiCurr + phiLast1 + phiLast2)/3
-#                    forward_speed  = 0
-#                    errorCurr = 0
-#                    
-#                    ## ********** Config paremeter ******** 
-#                    kp = 0.35
-#                    ki = 0.6
-#                    kd = 0.020
-#                    targetUltr = 0.195
-#                    ## ************************************
-#                    
-#                    ## ****** Distance average filter *****
-#                    distanceCurr = self.distance
-#                    distanceAver = (distanceCurr + distanceLast1 + distanceLast2)/3
-#                    errorCurr = distanceAver - targetUltr
-#                    distanceLast2 = distanceLast1
-#                    distanceLast1 = distanceCurr
-#                    # *************************************
-#
-#                    errorSum += errorCurr * 0.01
-#
-#                    integralBound = 0.3
-#                    if errorSum > integralBound:
-#                        errosrSum = integralBound
-#                    if errorSum < (-1 * integralBound):
-#                        errorSum = -1 * integralBound
-#                    forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
-#                                       
-#                                        
-#                    ## ******* Add forward_speed setpoint *********
-#                    # Minimum forward_speed for the car to start moving
-#                    if forward_speed > 0:
-#                        forward_speed += 0.11
-#                    if forward_speed < 0:
-#                        forward_speed -= 0.155
-#                    ## ************************************ 
-#                    
-#                    ## ******** Restrict output ***********
-#                    #if forward_speed > 0.3
-#                    #    forward_speed  = 0.3
-#                    #if forward_speed < -0.3:
-#                    #    forward_speed = -0.3
-#                    # *************************************
-#                   
-#                    ## *** Measure setpoint (for debug) ***
-#                    #forward_speed  = -0.13
-#                    ## ************************************
-#
-#                    self.leftforward_speed = forward_speed
-#                    self.rightforward_speed = forward_speed
+                        print "rho: %f, phi: %f\n" % (rho_average, phi_average)
+
+                        forward_speed  = 0
+                        errorCurr = 0
+                    
+                        ## ********** Config paremeter ******** 
+                        kp = 0.7
+                        ki = 0.6
+                        kd = 0.020
+                        targetUltr = 0.195
+                        ## ************************************
+                        
+                        errorCurr = rho_average
+                        errorSum += errorCurr * 0.01
+    
+                        integralBound = 0.3
+                        if errorSum > integralBound:
+                            errosrSum = integralBound
+                        if errorSum < (-1 * integralBound):
+                            errorSum = -1 * integralBound
+                        forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
+                        errorLast = errorCurr                                       
+                                        
+                        ## ******* Add forward_speed setpoint *********
+                        # Minimum forward_speed for the car to start moving
+                        if forward_speed > 0:
+                            forward_speed += 0.05
+                        if forward_speed < 0:
+                            forward_speed -= 0.05
+                        ## ************************************ 
+                        
+                        # ******** Restrict output ***********
+                        if forward_speed > 0.3:
+                            forward_speed  = 0.3
+                        if forward_speed < -0.3:
+                            forward_speed = -0.3
+                        #*************************************
+
+                        if phi_average > 25:
+                            phi_average = 25
+                        if phi_average < -25:
+                            phi_average = -25
+                        ks = 0.05
+                        steering_speed = ks * phi_average 
+
+
+                        # ******** Restrict output ***********
+                        if steering_speed > 0.2:
+                            steering_speed  = 0.2
+                        if steering_speed < -0.2:
+                            steering_speed = -0.2
+                        #*************************************
+
+                        print "forward speed: %f\n" % forward_speed
+                        print "steering speed: %f\n" % steering_speed
+
+                        self.leftSpeed = forward_speed  - steering_speed
+                        self.rightSpeed = forward_speed + steering_speed
 
 
 		    ##Leave these lines at the end
-		    self.publishMotors()
-		    self.publishServo()
+	    	        self.publishMotors()
+		        self.publishServo()
 #		    self.publishLED()
 		    self.rate.sleep()
 
