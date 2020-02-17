@@ -290,31 +290,30 @@ class autonomy(object):
                         ## ******* Add forward_speed setpoint *********
                         # Minimum forward_speed for the car to start moving
                         if forward_speed > 0:
-                            forward_speed += 0.05
+                            forward_speed += 0.10
                         if forward_speed < 0:
-                            forward_speed -= 0.05
+                            forward_speed -= 0.10
                         ## ************************************ 
                         
                         # ******** Restrict output ***********
-                        if forward_speed > 0.3:
-                            forward_speed  = 0.3
-                        if forward_speed < -0.3:
-                            forward_speed = -0.3
+                        if forward_speed > 0.23:
+                            forward_speed  = 0.23
+                        if forward_speed < -0.23:
+                            forward_speed = -0.23
                         #*************************************
 
                         if phi_average > 25:
                             phi_average = 25
                         if phi_average < -25:
                             phi_average = -25
-                        ks = 0.05
+                        ks = 0.035
                         steering_speed = ks * phi_average 
 
-
                         # ******** Restrict output ***********
-                        if steering_speed > 0.2:
-                            steering_speed  = 0.2
-                        if steering_speed < -0.2:
-                            steering_speed = -0.2
+                        if steering_speed > 0.15:
+                            steering_speed  = 0.15
+                        if steering_speed < -0.15:
+                            steering_speed = -0.15
                         #*************************************
 
                         print "forward speed: %f\n" % forward_speed
