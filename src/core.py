@@ -302,7 +302,7 @@ class autonomy(object):
                                         
                                                
                         # ******** Restrict output ***********
-                        forward_upper_bound = 0.13
+                        forward_upper_bound = 0.15
                         if forward_speed > forward_upper_bound:
                             forward_speed  = forward_upper_bound 
                         if forward_speed < -forward_upper_bound:
@@ -314,19 +314,19 @@ class autonomy(object):
                             phi_average = 25
                         if phi_average < -25:
                             phi_average = -25
-                        ks = 0.05
+                        ks = 0.03
                         
-                        kc = 0.1
+                        kc = 0.2
                         if alpha_average > 15 or alpha_average < -15:
                             steering_speed = kc * alpha_average
                         else:
                             steering_speed = ks * phi_average 
 
                         # ******** Restrict output ***********
-                        if steering_speed > 0.13:
-                            steering_speed  = 0.13
-                        if steering_speed < -0.13:
-                            steering_speed = -0.13
+                        if steering_speed > 0.15:
+                            steering_speed  = 0.15
+                        if steering_speed < -0.15:
+                            steering_speed = -0.15
 
                        # if correction_speed > 0.2:
                        #     correction_speed = 0.2
@@ -341,8 +341,8 @@ class autonomy(object):
                         self.rightSpeed = forward_speed + steering_speed 
 
                         # Minimum forward_speed for the car to start moving
-                        speed_upper_bound = 0.28
-                        speed_lower_bound = 0.10
+                        speed_upper_bound = 0.50
+                        speed_lower_bound = 0.15
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
