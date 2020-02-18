@@ -284,7 +284,7 @@ class autonomy(object):
                     
                         ## ********** Config paremeter ******** 
                         kp = 0.8
-                        ki = 0.0
+                        ki = 0.6
                         kd = 0.020
                         targetUltr = 0.195
                         ## ************************************
@@ -302,7 +302,7 @@ class autonomy(object):
                                         
                                                
                         # ******** Restrict output ***********
-                        forward_upper_bound = 0.2
+                        forward_upper_bound = 0.1
                         if forward_speed > forward_upper_bound:
                             forward_speed  = forward_upper_bound 
                         if forward_speed < -forward_upper_bound:
@@ -314,25 +314,20 @@ class autonomy(object):
                             phi_average = 25
                         if phi_average < -25:
                             phi_average = -25
-                        ks = 0.04
+                        ks = 0.015
                         
                         kc = 0.2
                         if alpha_average > 15 or alpha_average < -15:
                             steering_speed = kc * alpha_average
                         else:
                             steering_speed = ks * phi_average 
-
-                        # ******** Restrict output ***********
-                        if steering_speed > 0.2:
-                            steering_speed  = 0.2
-                        if steering_speed < -0.2:
-                            steering_speed = -0.2
-
-                       # if correction_speed > 0.2:
-                       #     correction_speed = 0.2
-                       # if correction_speed < -0.2:
-                       #     correction_speed = -0.2
-                        #*************************************
+                            # ******** Restrict output ***********
+                            steering_upper_bound = 0.12
+                            if steering_speed > steering_upper_bound:
+                                steering_speed =steering_upper_bound 
+                            if steering_speed < -steering_upper_bound:
+                                steering_speed = -steering_upper_bound 
+                            #*************************************
 
                         print "forward speed: %f\n" % forward_speed
                         print "steering speed: %f\n" % steering_speed
@@ -341,8 +336,8 @@ class autonomy(object):
                         self.rightSpeed = forward_speed + steering_speed 
 
                         # Minimum forward_speed for the car to start moving
-                        speed_upper_bound = 0.45
-                        speed_lower_bound = 0.10
+                        speed_upper_bound = 0.32
+                        speed_lower_bound = 0.18
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
