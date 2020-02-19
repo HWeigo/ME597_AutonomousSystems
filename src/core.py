@@ -361,10 +361,12 @@ class autonomy(object):
                                 phi_average = -25
                             ks = 0.04
                             kc = 0.3
+                            kx = 0.5
                             if alpha_average > 18 or alpha_average < -18:
                                 steering_speed = kc * alpha_average
                             else:
-                                steering_speed = ks * phi_average 
+                                steering_speed = kx * delta_x 
+                                #steering_speed = ks * phi_average 
                                 # ******** Restrict output ***********
                                 steering_upper_bound = 0.12
                                 if steering_speed > steering_upper_bound:
