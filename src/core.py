@@ -264,7 +264,7 @@ class autonomy(object):
 #                runTime = 0
                 while not rospy.is_shutdown():
                     if self.isArUcoDetect is True:
-                        [rhoCurr, phiCurr, delta_x] = self.frame_transformation([[0],[-0.9]], self.trans_xz, self.rot_z)
+                        [rhoCurr, phiCurr, delta_x] = self.frame_transformation([[0],[-0.3]], self.trans_xz, self.rot_z)
                         alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
                         alphaCurr = math.degrees(alphaCurr) - 90
 
@@ -328,8 +328,8 @@ class autonomy(object):
                             errorCurr = 0
                     
                             ## ********** Config paremeter ******** 
-                            kp = 0.8
-                            ki = 0.6
+                            kp = 0.6
+                            ki = 0.0
                             kd = 0.020
                             targetUltr = 0.195
                             ## ************************************
@@ -347,7 +347,7 @@ class autonomy(object):
                                             
                                                    
                             # ******** Restrict output ***********
-                            forward_upper_bound = 0.13
+                            forward_upper_bound = 0.10
                             if forward_speed > forward_upper_bound:
                                 forward_speed  = forward_upper_bound 
                             if forward_speed < -forward_upper_bound:
@@ -359,14 +359,14 @@ class autonomy(object):
                                 phi_average = 25
                             if phi_average < -25:
                                 phi_average = -25
-                            ks = 0.02
+                            ks = 0.04
                             kc = 0.3
                             if alpha_average > 18 or alpha_average < -18:
                                 steering_speed = kc * alpha_average
                             else:
                                 steering_speed = ks * phi_average 
                                 # ******** Restrict output ***********
-                                steering_upper_bound = 0.13
+                                steering_upper_bound = 0.12
                                 if steering_speed > steering_upper_bound:
                                     steering_speed =steering_upper_bound 
                                 if steering_speed < -steering_upper_bound:
@@ -380,8 +380,8 @@ class autonomy(object):
                             self.rightSpeed = forward_speed + steering_speed 
 
                             # Minimum forward_speed for the car to start moving
-                            speed_upper_bound = 0.34
-                            speed_lower_bound = 0.20
+                            speed_upper_bound = 0.30
+                            speed_lower_bound = 0.17
 
                             if self.leftSpeed > 0:
                                 self.leftSpeed += speed_lower_bound 
