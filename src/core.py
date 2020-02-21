@@ -253,9 +253,9 @@ class autonomy(object):
                 rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
                 phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
                 if math.degrees(phi) < 180 and math.degrees(phi) > 0: 
-                    return float(rho), math.degrees(phi) - 90, robot_position[0]
+                    return float(rho), math.degrees(phi) - 90, robot_position[0], robot_position[1]
                 else:
-                    return -float(rho), math.degrees(phi) + 90, robot_position[0]
+                    return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
 
         def runner(self):
                 errorSum = 0;
@@ -275,7 +275,7 @@ class autonomy(object):
                     times_since_last_fid = 0
                     if self.isArUcoDetect is True:
                         times_since_last_fid = 0
-                        [rhoCurr, phiCurr, delta_x] = self.frame_transformation([[0],[-0.3]], self.trans_xz, self.rot_z)
+                        [rhoCurr, phiCurr, delta_x, delta_z] = self.frame_transformation([[0],[-0.3]], self.trans_xz, self.rot_z)
                         alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
                         alphaCurr = math.degrees(alphaCurr) - 90
 
@@ -370,7 +370,7 @@ class autonomy(object):
                             targetUltr = 0.195
                             ## ************************************
                             
-                            errorCurr = self.trans_xz[1] - 0.9 
+                            errorCurr = delta_z - 0.8 
                             errorSum += errorCurr * 0.01
     
                             integralBound = 0.3
