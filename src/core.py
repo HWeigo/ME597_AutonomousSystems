@@ -370,7 +370,7 @@ class autonomy(object):
                             targetUltr = 0.195
                             ## ************************************
                             
-                            errorCurr = delta_z - 0.8 
+                            errorCurr = self.trans_xz[1] - 0.8 
                             errorSum += errorCurr * 0.01
     
                             integralBound = 0.3
