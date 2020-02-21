@@ -301,9 +301,9 @@ class autonomy(object):
                                 self.rightSpeed = steering_speed 
                             else:
                                 ## ********** Config paremeter ******** 
-                                kp = 0.05
+                                kp = 0.08
                                 ki = 0.0
-                                kd = 0.020
+                                kd = 0.0
                                 targetUltr = 0.195
                                 ## ************************************
                                 
@@ -332,7 +332,7 @@ class autonomy(object):
 
                             # Minimum forward_speed for the car to start moving
                             speed_upper_bound = 0.32
-                            speed_lower_bound = 0.12
+                            speed_lower_bound = 0.10
 
                             if self.leftSpeed > 0:
                                 self.leftSpeed += speed_lower_bound 
