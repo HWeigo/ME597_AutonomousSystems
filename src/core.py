@@ -237,19 +237,19 @@ class autonomy(object):
                 else:
                     return -1
 
+        # Calculate robot position (delta_x, delta_z) in ground frame ( based on the tag)
+        # Calculate target position (0,0,0.8) in robot frame, return in polar coordinates (rho, phi)
         def frame_transformation(self, destination, trans_xz, rot_z):
                 theta = -108.9 * rot_z - 0.9179  # calculate the angle between two frames (degree)
                 theta = math.radians(theta)  # convert the angle into radians
                 print(theta)
+                # Rotation matrix
                 rotation_Rri_matrix = np.array([(math.cos(theta), -math.sin(theta)),(math.sin(theta), math.cos(theta))])
                 rotation_Rir_matrix = np.array([(math.cos(theta), math.sin(theta)),(-math.sin(theta), math.cos(theta))])
-                #print(rotation_Rri_matrix)
+                
                 destination = np.array(destination)
-                #print(destination)
                 destination_coordinate = rotation_Rri_matrix.dot(destination) + np.array([[trans_xz[0]], [trans_xz[1]]])
                 robot_position = rotation_Rir_matrix.dot(np.array([[-trans_xz[0]],[-trans_xz[1]]]))
-                #print(destination_coordinate)
-                print(robot_position)
                 rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
                 phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
                 if math.degrees(phi) < 180 and math.degrees(phi) > 0: 
@@ -270,7 +270,6 @@ class autonomy(object):
                 delta_x_sum = 0
                 leftLast = 0
                 rightLast = 0
-#                runTime = 0
                 while not rospy.is_shutdown():
                     times_since_last_fid = 0
                     if self.isArUcoDetect is True:
@@ -291,9 +290,12 @@ class autonomy(object):
                         alphaLast2 = alphaLast1
                         alphaLast1 = alphaCurr
                         print "rho: %f,\nphi: %f,\n alpha: %f,\ndelta_x:%f" % (rho_average, phi_average, alpha_average, delta_x)
+                        
                         if delta_x < 0.13 and delta_x > -0.13:
+                        # Robot is near the y axis of the ground frame (based on the tag)
                             kc = 0.2
                             if alpha_average > 5 or alpha_average < -5:
+                                # Step 2 : turn the cat head to the tag (alpha = 0) 
                                 steering_speed = kc * alpha_average
                                 # ******** Restrict output ***********
                                 steering_upper_bound = 0.16
@@ -305,6 +307,8 @@ class autonomy(object):
                                 self.leftSpeed = -steering_speed 
                                 self.rightSpeed = steering_speed 
                             else:
+                                # Step 3: straight line PID control to make the car stop at distance 0.8
+
                                 ## ********** Config paremeter ******** 
                                 kp = 0.1
                                 ki = 0.0
@@ -323,19 +327,9 @@ class autonomy(object):
                                 forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                                 errorLast = errorCurr                                       
                                                 
-                                                       
-                               # # ******** Restrict output ***********
-                               # forward_upper_bound = 0.05
-                               # if forward_speed > forward_upper_bound:
-                               #     forward_speed  = forward_upper_bound 
-                               # if forward_speed < -forward_upper_bound:
-                               #     forward_speed = -forward_upper_bound 
-                               # #*************************************
-    
                                 self.leftSpeed = forward_speed  
                                 self.rightSpeed = forward_speed  
 
-                            # Minimum forward_speed for the car to start moving
                             speed_upper_bound = 0.32
                             speed_lower_bound = 0.10
 
@@ -358,11 +352,12 @@ class autonomy(object):
                                 self.rightSpeed = -speed_upper_bound 
                             ## ************************************ 
 
-		    ##Le    ave these lines at the end
 	    	            self.publishMotors()
 		            self.publishServo()
                         else:
-                    
+                            # Robot is far away from y axis
+                            # Step 1 : drive robot approach y axis as much as possible
+
                             ## ********** Config paremeter ******** 
                             kp = 0.8
                             ki = 0.0
@@ -380,7 +375,6 @@ class autonomy(object):
                                 errorSum = -1 * integralBound
                             forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
                             errorLast = errorCurr                                       
-                                            
                                                    
                             # ******** Restrict output ***********
                             forward_upper_bound = 0.05
@@ -389,7 +383,6 @@ class autonomy(object):
                             if forward_speed < -forward_upper_bound:
                                 forward_speed = -forward_upper_bound 
                             #*************************************
-
 
                             if phi_average > 25:
                                 phi_average = 25
@@ -401,15 +394,16 @@ class autonomy(object):
                             kxi = 8.0
                             self.leftSpeed = forward_speed 
                             self.rightSpeed = forward_speed 
-
+                            
+                            # Check whether it's going to loss vision
                             if alpha_average > 20 or alpha_average < -20:
-                                #kc = 0.15
+                                # If alpha is too large, turn a little bit to make sure tag can still be captured by camera
                                 steering_speed = kc * alpha_average
                             else:
+                                # Use PI controller to make robot approach y axis
                                 delta_x_sum += delta_x * 0.01
                                 steering_speed = kxp * delta_x + kxi * delta_x_sum 
                                 
-                                #steering_speed = ks * phi_average 
                                 # ******** Restrict output ***********
                                 steering_upper_bound = 0.18
                                 if steering_speed > steering_upper_bound:
@@ -426,25 +420,6 @@ class autonomy(object):
                             if steering_speed > 0:
                                 self.rightSpeed = forward_speed + steering_speed 
 
-                           # if alpha_average > 18 or alpha_average < -18:
-                           #     steering_speed = kc * alpha_average
-                           # else:
-                           #     steering_speed = kx * delta_x 
-                           #     #steering_speed = ks * phi_average 
-                           #     # ******** Restrict output ***********
-                           #     steering_upper_bound = 0.13
-                           #     if steering_speed > steering_upper_bound:
-                           #         steering_speed =steering_upper_bound 
-                           #     if steering_speed < -steering_upper_bound:
-                           #         steering_speed = -steering_upper_bound 
-                           #     #*************************************
-
-                           # print "forward speed: %f\n" % forward_speed
-                           # print "steering speed: %f\n" % steering_speed
-
-                           # self.leftSpeed = forward_speed  - steering_speed 
-                           # self.rightSpeed = forward_speed + steering_speed
-                            
                             # Minimum forward_speed for the car to start moving
                             speed_upper_bound = 0.30
                             speed_lower_bound = 0.05
@@ -468,16 +443,16 @@ class autonomy(object):
                                 self.rightSpeed = -speed_upper_bound 
                             ## ************************************ 
                             
-		    ##Le    ave these lines at the end
 	    	            self.publishMotors()
 		            self.publishServo()
 
                         leftLast = self.leftSpeed 
                         rightLast = self.rightSpeed 
                     else:
+                        # If lost vision, try turning in the opposite derection
+
                         times_since_last_fid += 1
                         if times_since_last_fid < 10:
-                            #steering_speed = 0.2 * alpha_average
                             if leftLast < rightLast:
                                 self.leftSpeed = 0.25
                                 self.rightSpeed = -0.25
@@ -489,7 +464,6 @@ class autonomy(object):
                             self.rightSpeed = 0
                         self.publishMotors()
 
-#		    self.publishLED()
 		    self.rate.sleep()
 
 
