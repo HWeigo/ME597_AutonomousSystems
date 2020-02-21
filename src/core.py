@@ -47,8 +47,32 @@ class autonomy(object):
 			self.rightLine = data.rightLine
 
 		def distanceCallback(data):
-			#self.distance = data.distance
+			self.distance = data.distance
                         return
+                
+                def detect_edges(frame):
+                        # filter for blue lane lines
+                        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                        #cv2.imshow("hsv", hsv)
+                        lower_yellow = np.array([0, 40, 40])
+                        upper_yellow = np.array([60, 255, 255])
+                        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+                        #cv2.imshow("blue mask", mask)
+                        # detect edges
+                        edges = cv2.Canny(mask, 200, 400)
+
+                        return edges 
+    
+                def region_of_interest(edges):
+                        height, width = edges.shape
+                        mask = np.zeros_like(edges)
+
+                        # only focus bottom half of the screen
+                        polygon = np.array([[(0, height * 1 / 2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+
+                        cv2.fillPoly(mask, polygon, 255)
+                        cropped_edges = cv2.bitwise_and(edges, mask)
+                        return cropped_edges
 
                 def imageProcessing(data):
 			try:
@@ -57,51 +81,19 @@ class autonomy(object):
 				print(e)
 
 			##Place image processing code here!
-                        
-                        # Setup SimpleBlobDetector parameters.
-                        params = cv2.SimpleBlobDetector_Params()
+                        print "Processing image."
+                        cv2.imshow("original image", frame)
+                        edges = detect_edges(frame)
+                        cropped_edges = region_of_interest(edges)
 
-                        # Change thresholds
-                        params.minThreshold = 10
-                        params.maxThreshold = 200
-
-
-                        # Filter by Area.
-                        params.filterByArea = True
-                        params.minArea = 1500
-
-                        # Filter by Circularity
-                        params.filterByCircularity = True
-                        params.minCircularity = 0.5
-                        params.maxCircularity = 0.8
-
-                        # Filter by Convexity
-                        params.filterByConvexity = True
-                        params.minConvexity = 0.87
-                            
-                        # Filter by Inertia
-                        params.filterByInertia = True
-                        params.minInertiaRatio = 0.01
-
-                        # Create a detector with the parameters
-                        ver = (cv2.__version__).split('.')
-                        if int(ver[0]) < 3 :
-                            detector = cv2.SimpleBlobDetector(params)
-                        else : 
-                            detector = cv2.SimpleBlobDetector_create(params)
-                        # Set up the detector with default parameters.
-                        # detector = cv2.SimpleBlobDetector()
-                          
-                        # Detect blobs.
-                        keypoints = detector.detect(frame)
-                           
-                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(frame, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
-
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
+                       
+                
                 self.rotzLast1 = 0
                 self.rotzLast2 = 0
 		def fiducialNav(data):
                     id = -1
-                    print "FiducialNav callback"
+                    #print "FiducialNav callback"
                     self.isArUcoDetect = False
 
 		    for m in data.transforms:
@@ -122,10 +114,10 @@ class autonomy(object):
 
 
 		#Subscribe to topics
-		rospy.Subscriber('raspicam_node/image_rect_color',Image,imageProcessing)
+		rospy.Subscriber('raspicam_node/image', Image, imageProcessing)
 		rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
-		rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
+		#rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(10)
@@ -134,7 +126,7 @@ class autonomy(object):
 		motorMsg = motors()
 		motorMsg.leftSpeed = self.leftSpeed
 		motorMsg.rightSpeed = self.rightSpeed
-		rospy.loginfo(motorMsg)
+		#rospy.loginfo(motorMsg)
 		self.motorPub.publish(motorMsg)
 
 	def publishServo(self):
