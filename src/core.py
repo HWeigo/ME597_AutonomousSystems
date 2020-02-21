@@ -97,7 +97,8 @@ class autonomy(object):
                            
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(frame, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
 
-
+                self.rotzLast1 = 0
+                self.rotzLast2 = 0
 		def fiducialNav(data):
                     id = -1
                     print "FiducialNav callback"
@@ -108,9 +109,12 @@ class autonomy(object):
 			trans = m.transform.translation
                         rot = m.transform.rotation
                         print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
-                        print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, rot.z, rot.w)
                         self.trans_xz = [trans.x, trans.z]
-                        self.rot_z = rot.z
+                        self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
+                        self.rotzLast2 = self.rotzLast1 
+                        self.rotzLast1 = rot.z
+                        
+                        print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
                                 
                         if id is 2:
                                 self.isArUcoDetect = True
@@ -245,6 +249,7 @@ class autonomy(object):
                 destination_coordinate = rotation_Rri_matrix.dot(destination) + np.array([[trans_xz[0]], [trans_xz[1]]])
                 robot_position = rotation_Rir_matrix.dot(np.array([[-trans_xz[0]],[-trans_xz[1]]]))
                 #print(destination_coordinate)
+                print(robot_position)
                 rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
                 phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
                 if math.degrees(phi) < 180 and math.degrees(phi) > 0: 
@@ -347,7 +352,7 @@ class autonomy(object):
                                             
                                                    
                             # ******** Restrict output ***********
-                            forward_upper_bound = 0.10
+                            forward_upper_bound = 0.12
                             if forward_speed > forward_upper_bound:
                                 forward_speed  = forward_upper_bound 
                             if forward_speed < -forward_upper_bound:
@@ -360,15 +365,15 @@ class autonomy(object):
                             if phi_average < -25:
                                 phi_average = -25
                             ks = 0.04
-                            kc = 0.3
-                            kx = 0.5
+                            kc = 0.2
+                            kx = 0.9
                             if alpha_average > 18 or alpha_average < -18:
                                 steering_speed = kc * alpha_average
                             else:
                                 steering_speed = kx * delta_x 
                                 #steering_speed = ks * phi_average 
                                 # ******** Restrict output ***********
-                                steering_upper_bound = 0.12
+                                steering_upper_bound = 0.13
                                 if steering_speed > steering_upper_bound:
                                     steering_speed =steering_upper_bound 
                                 if steering_speed < -steering_upper_bound:
@@ -382,8 +387,8 @@ class autonomy(object):
                             self.rightSpeed = forward_speed + steering_speed 
 
                             # Minimum forward_speed for the car to start moving
-                            speed_upper_bound = 0.30
-                            speed_lower_bound = 0.17
+                            speed_upper_bound = 0.32
+                            speed_lower_bound = 0.18
 
                             if self.leftSpeed > 0:
                                 self.leftSpeed += speed_lower_bound 
