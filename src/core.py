@@ -268,6 +268,8 @@ class autonomy(object):
                 alphaLast2 = 0
                 alpha_average = 0
                 delta_x_sum = 0
+                leftLast = 0
+                rightLast = 0
 #                runTime = 0
                 while not rospy.is_shutdown():
                     times_since_last_fid = 0
@@ -289,12 +291,12 @@ class autonomy(object):
                         alphaLast2 = alphaLast1
                         alphaLast1 = alphaCurr
                         print "rho: %f,\nphi: %f,\n alpha: %f,\ndelta_x:%f" % (rho_average, phi_average, alpha_average, delta_x)
-                        if delta_x < 0.15 and delta_x > -0.15:
+                        if delta_x < 0.13 and delta_x > -0.13:
                             kc = 0.2
                             if alpha_average > 5 or alpha_average < -5:
                                 steering_speed = kc * alpha_average
                                 # ******** Restrict output ***********
-                                steering_upper_bound = 0.12
+                                steering_upper_bound = 0.16
                                 if steering_speed > steering_upper_bound:
                                     steering_speed =steering_upper_bound 
                                 if steering_speed < -steering_upper_bound:
@@ -304,13 +306,13 @@ class autonomy(object):
                                 self.rightSpeed = steering_speed 
                             else:
                                 ## ********** Config paremeter ******** 
-                                kp = 0.08
+                                kp = 0.1
                                 ki = 0.0
                                 kd = 0.0
                                 targetUltr = 0.195
                                 ## ************************************
                                 
-                                errorCurr = self.trans_xz[1] - 0.9 
+                                errorCurr = self.trans_xz[1] - 0.8 
                                 errorSum += errorCurr * 0.01
         
                                 integralBound = 0.3
@@ -396,7 +398,7 @@ class autonomy(object):
                             ks = 0.04
                             kc = 0.15
                             kxp = 2.5
-                            kxi = 4.0
+                            kxi = 8.0
                             self.leftSpeed = forward_speed 
                             self.rightSpeed = forward_speed 
 
@@ -465,17 +467,22 @@ class autonomy(object):
                             if self.rightSpeed < -speed_upper_bound:
                                 self.rightSpeed = -speed_upper_bound 
                             ## ************************************ 
-
+                            
 		    ##Le    ave these lines at the end
 	    	            self.publishMotors()
 		            self.publishServo()
+
+                        leftLast = self.leftSpeed 
+                        rightLast = self.rightSpeed 
                     else:
                         times_since_last_fid += 1
                         if times_since_last_fid < 10:
-                            steering_speed = 0.2 * alpha_average
-                            if steering_speed < 0:
-                                self.leftSpeed = -0.25 
-                            if steering_speed > 0:
+                            #steering_speed = 0.2 * alpha_average
+                            if leftLast < rightLast:
+                                self.leftSpeed = 0.25
+                                self.rightSpeed = -0.25
+                            else:
+                                self.leftSpeed = -0.25
                                 self.rightSpeed = 0.25
                         else:
                             self.leftSpeed = 0
