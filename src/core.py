@@ -266,10 +266,13 @@ class autonomy(object):
                 phiLast2 = 0
                 alphaLast1 = 0
                 alphaLast2 = 0
+                alpha_average = 0
                 delta_x_sum = 0
 #                runTime = 0
                 while not rospy.is_shutdown():
+                    times_since_last_fid = 0
                     if self.isArUcoDetect is True:
+                        times_since_last_fid = 0
                         [rhoCurr, phiCurr, delta_x] = self.frame_transformation([[0],[-0.3]], self.trans_xz, self.rot_z)
                         alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
                         alphaCurr = math.degrees(alphaCurr) - 90
@@ -391,13 +394,14 @@ class autonomy(object):
                             if phi_average < -25:
                                 phi_average = -25
                             ks = 0.04
-                            kc = 0.2
-                            kxp = 2.0
-                            kxi = 1.0
+                            kc = 0.15
+                            kxp = 2.5
+                            kxi = 4.0
                             self.leftSpeed = forward_speed 
                             self.rightSpeed = forward_speed 
 
-                            if alpha_average > 18 or alpha_average < -18:
+                            if alpha_average > 20 or alpha_average < -20:
+                                #kc = 0.15
                                 steering_speed = kc * alpha_average
                             else:
                                 delta_x_sum += delta_x * 0.01
@@ -465,6 +469,19 @@ class autonomy(object):
 		    ##Le    ave these lines at the end
 	    	            self.publishMotors()
 		            self.publishServo()
+                    else:
+                        times_since_last_fid += 1
+                        if times_since_last_fid < 10:
+                            steering_speed = 0.2 * alpha_average
+                            if steering_speed < 0:
+                                self.leftSpeed = -0.25 
+                            if steering_speed > 0:
+                                self.rightSpeed = 0.25
+                        else:
+                            self.leftSpeed = 0
+                            self.rightSpeed = 0
+                        self.publishMotors()
+
 #		    self.publishLED()
 		    self.rate.sleep()
 
