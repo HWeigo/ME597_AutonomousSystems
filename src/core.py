@@ -50,30 +50,7 @@ class autonomy(object):
 			self.distance = data.distance
                         return
                 
-                def detect_edges(frame):
-                        # filter for blue lane lines
-                        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                        #cv2.imshow("hsv", hsv)
-                        lower_yellow = np.array([0, 40, 40])
-                        upper_yellow = np.array([60, 255, 255])
-                        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-                        #cv2.imshow("blue mask", mask)
-                        # detect edges
-                        edges = cv2.Canny(mask, 200, 400)
-
-                        return edges 
-    
-                def region_of_interest(edges):
-                        height, width = edges.shape
-                        mask = np.zeros_like(edges)
-
-                        # only focus bottom half of the screen
-                        polygon = np.array([[(0, height * 1 / 2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
-
-                        cv2.fillPoly(mask, polygon, 255)
-                        cropped_edges = cv2.bitwise_and(edges, mask)
-                        return cropped_edges
-
+                    
                 def imageProcessing(data):
 			try:
 				frame=self.bridge.imgmsg_to_cv2(data,desired_encoding="passthrough")
@@ -83,10 +60,10 @@ class autonomy(object):
 			##Place image processing code here!
                         print "Processing image."
                         cv2.imshow("original image", frame)
-                        edges = detect_edges(frame)
-                        cropped_edges = region_of_interest(edges)
-                        #line_segments = self.detect_line_segments(cropped_edges)
-                        #print(line_segments)
+                        edges = self.detect_edges(frame)
+                        cropped_edges = self.region_of_interest(edges)
+                        line_segments = self.detect_line_segments(cropped_edges)
+                        print(line_segments)
                         #lane_lines = self.average_slope_intercept(frame, line_segments)
                         #print(lane_lines);
 
@@ -125,6 +102,31 @@ class autonomy(object):
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(10)
+    
+        def detect_edges(self, frame):
+                # filter for blue lane lines
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                #cv2.imshow("hsv", hsv)
+                lower_yellow = np.array([0, 40, 40])
+                upper_yellow = np.array([60, 255, 255])
+                mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+                #cv2.imshow("blue mask", mask)
+                # detect edges
+                edges = cv2.Canny(mask, 200, 400)
+
+                return edges 
+        
+        def region_of_interest(self, edges):
+                height, width = edges.shape
+                mask = np.zeros_like(edges)
+
+                # only focus bottom half of the screen
+                polygon = np.array([[(0, height * 1 / 2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+
+                cv2.fillPoly(mask, polygon, 255)
+                cropped_edges = cv2.bitwise_and(edges, mask)
+                return cropped_edges
+
 
         def detect_line_segments(self, cropped_edges):
                 # tuning min_threshold, minLineLength, maxLineGap is a trial and error process by hand
