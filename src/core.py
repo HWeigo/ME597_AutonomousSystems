@@ -3,6 +3,7 @@
 import numpy as np
 import rospy
 import math
+import logging
 import time
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -63,8 +64,8 @@ class autonomy(object):
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
                         line_segments = self.detect_line_segments(cropped_edges)
-                        print(line_segments)
-                        #lane_lines = self.average_slope_intercept(frame, line_segments)
+                        #print(line_segments)
+                        lane_lines = self.average_slope_intercept(frame, line_segments)
                         #print(lane_lines);
 
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
@@ -107,8 +108,8 @@ class autonomy(object):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 #cv2.imshow("hsv", hsv)
-                lower_yellow = np.array([0, 40, 40])
-                upper_yellow = np.array([60, 255, 255])
+                lower_yellow = np.array([20, 40, 40])
+                upper_yellow = np.array([35, 255, 255])
                 mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 #cv2.imshow("blue mask", mask)
                 # detect edges
@@ -137,6 +138,18 @@ class autonomy(object):
                 np.array([]), minLineLength=8, maxLineGap=4)
         
                 return line_segments	
+
+        def make_points(self, frame, line):
+                height, width, _ = frame.shape
+                slope, intercept = line
+                y1 = height  # bottom of the frame
+                y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
+            
+                # bound the coordinates within the frame
+                x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
+                x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
+                return [[x1, y1, x2, y2]]
+
 
         def average_slope_intercept(self, frame, line_segments):
                 """
@@ -174,26 +187,15 @@ class autonomy(object):
             
                 left_fit_average = np.average(left_fit, axis=0)
                 if len(left_fit) > 0:
-                    lane_lines.append(make_points(frame, left_fit_average))
+                    lane_lines.append(self.make_points(frame, left_fit_average))
             
                 right_fit_average = np.average(right_fit, axis=0)
                 if len(right_fit) > 0:
-                    lane_lines.append(make_points(frame, right_fit_average))
+                    lane_lines.append(self.make_points(frame, right_fit_average))
             
                 logging.debug('lane lines: %s' % lane_lines)  # [[[316, 720, 484, 432]], [[1009, 720, 718, 432]]]
             
                 return lane_lines
-
-        def make_points(self, frame, line):
-                height, width, _ = frame.shape
-                slope, intercept = line
-                y1 = height  # bottom of the frame
-                y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
-            
-                # bound the coordinates within the frame
-                x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
-                x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
-                return [[x1, y1, x2, y2]]
 
         def publishMotors(self):
 		motorMsg = motors()
