@@ -62,8 +62,11 @@ class autonomy(object):
 			##Place image processing code here!
                         print "Processing image."
                         cv2.imshow("original image", frame)
-                        edges = self.detect_edges(frame)
-                        cropped_edges = self.region_of_interest(edges)
+                        #edges = self.detect_edges(frame)
+                        #cropped_edges = self.region_of_interest(edges)
+                        cropped_edges = self.region_of_interest(frame)
+                        edges = self.detect_edges(cropped_edges)
+
                         height, width = edges.shape
                         line_segments = self.detect_line_segments(cropped_edges)
                         #print(line_segments)
