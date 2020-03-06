@@ -66,10 +66,23 @@ class autonomy(object):
                         line_segments = self.detect_line_segments(cropped_edges)
                         #print(line_segments)
                         lane_lines = self.average_slope_intercept(frame, line_segments)
-                        #print(lane_lines);
+                        print(lane_lines);
 
-                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
-                       
+                        # Display lines
+                        lines = lane_lines 
+                        line_color=(0, 255, 0)
+                        line_width=2
+                        line_image = np.zeros_like(frame)
+                        if lines is not None:
+                            for line in lines:
+                                for x1, y1, x2, y2 in line:
+                                    cv2.line(line_image, (x1, y1), (x2, y2), line_color, line_width)
+                        line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
+
+
+                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
+ 
                 
                 self.rotzLast1 = 0
                 self.rotzLast2 = 0
@@ -108,8 +121,8 @@ class autonomy(object):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 #cv2.imshow("hsv", hsv)
-                lower_yellow = np.array([20, 40, 40])
-                upper_yellow = np.array([35, 255, 255])
+                lower_yellow = np.array([20, 40, 60])
+                upper_yellow = np.array([32, 255, 255])
                 mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 #cv2.imshow("blue mask", mask)
                 # detect edges
@@ -133,9 +146,9 @@ class autonomy(object):
                 # tuning min_threshold, minLineLength, maxLineGap is a trial and error process by hand
                 rho = 1  # distance precision in pixel, i.e. 1 pixel
                 angle = np.pi / 180  # angular precision in radian, i.e. 1 degree
-                min_threshold = 10  # minimal of votes
+                min_threshold = 15  # minimal of votes
                 line_segments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, 
-                np.array([]), minLineLength=8, maxLineGap=4)
+                np.array([]), minLineLength=20, maxLineGap=4)
         
                 return line_segments	
 
@@ -196,6 +209,7 @@ class autonomy(object):
                 logging.debug('lane lines: %s' % lane_lines)  # [[[316, 720, 484, 432]], [[1009, 720, 718, 432]]]
             
                 return lane_lines
+
 
         def publishMotors(self):
 		motorMsg = motors()
