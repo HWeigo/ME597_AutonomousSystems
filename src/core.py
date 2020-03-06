@@ -32,6 +32,7 @@ class autonomy(object):
 		self.bridge = CvBridge()
                 self.trans_xz = [0,0]
                 self.rot_z = 0
+                self.x_offset = 0
                 self.isArUcoDetect = False
 
 		#Setup Publishers
@@ -63,26 +64,41 @@ class autonomy(object):
                         cv2.imshow("original image", frame)
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
+                        height, width = edges.shape
                         line_segments = self.detect_line_segments(cropped_edges)
                         #print(line_segments)
                         lane_lines = self.average_slope_intercept(frame, line_segments)
                         print(lane_lines);
 
+                        # Calculate mid lane
+                        if len(lane_lines) == 2:
+                            _, _, left_x2, _ = lane_lines[0][0]
+                            _, _, right_x2, _ = lane_lines[1][0]
+                            mid = int(width / 2)
+                            x_offset = (left_x2 + right_x2) / 2 - mid
+                            y_offset = int(height / 2)
+                        if len(lane_lines) == 1:
+                            x1, _, x2, _ = lane_lines[0][0]
+                            x_offset = x2 - x1
+                            y_offset = int(height / 2)
+
                         # Display lines
-                        lines = lane_lines 
-                        line_color=(0, 255, 0)
+                        green =(0, 255, 0)
+                        red = (0, 0, 255)
                         line_width=2
                         line_image = np.zeros_like(frame)
-                        if lines is not None:
-                            for line in lines:
+                        if lane_lines is not None:
+                            for line in lane_lines:
                                 for x1, y1, x2, y2 in line:
-                                    cv2.line(line_image, (x1, y1), (x2, y2), line_color, line_width)
+                                    cv2.line(line_image, (x1, y1), (x2, y2), green, line_width)
+                            cv2.line(line_image, (width/2, height), (width/2 + x_offset, height/2), red, line_width)
                         line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
 
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
- 
+                        self.x_offset = x_offset 
+                        
                 
                 self.rotzLast1 = 0
                 self.rotzLast2 = 0
