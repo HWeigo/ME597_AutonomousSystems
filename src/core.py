@@ -85,7 +85,7 @@ class autonomy(object):
                         cv2.imshow("original image", frame)
                         edges = detect_edges(frame)
                         cropped_edges = region_of_interest(edges)
-                        line_segments = self.detect_line_segments(cropped_edges)
+                        #line_segments = self.detect_line_segments(cropped_edges)
                         #print(line_segments)
                         #lane_lines = self.average_slope_intercept(frame, line_segments)
                         #print(lane_lines);
