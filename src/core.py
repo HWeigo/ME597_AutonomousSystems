@@ -33,7 +33,8 @@ class autonomy(object):
                 self.trans_xz = [0,0]
                 self.rot_z = 0
                 self.x_offset = 0
-                self.isArUcoDetect = False
+                self.y_offset = 1
+                self.numLaneDetect = 0
 
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
@@ -60,7 +61,7 @@ class autonomy(object):
 				print(e)
 
 			##Place image processing code here!
-                        print "Processing image."
+                        #print "Processing image."
                         cv2.imshow("original image", frame)
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
@@ -69,19 +70,20 @@ class autonomy(object):
                         line_segments = self.detect_line_segments(cropped_edges)
                         #print(line_segments)
                         lane_lines = self.average_slope_intercept(frame, line_segments)
-                        print(lane_lines);
+                        #print(lane_lines);
 
                         # Calculate mid lane
+                        self.numLaneDetect = 0
                         if len(lane_lines) == 2:
+                            self.numLaneDetect = 2
                             _, _, left_x2, _ = lane_lines[0][0]
                             _, _, right_x2, _ = lane_lines[1][0]
                             mid = int(width / 2)
                             x_offset = (left_x2 + right_x2) / 2 - mid
-                            y_offset = int(height / 2)
                         if len(lane_lines) == 1:
+                            self.numLaneDetect = 1
                             x1, _, x2, _ = lane_lines[0][0]
                             x_offset = x2 - x1
-                            y_offset = int(height / 2)
 
                         # Display lines
                         green =(0, 255, 0)
@@ -93,13 +95,15 @@ class autonomy(object):
                                 for x1, y1, x2, y2 in line:
                                     cv2.line(line_image, (x1, y1), (x2, y2), green, line_width)
                             cv2.line(line_image, (width/2, height), (width/2 + x_offset, height/2), red, line_width)
+
                         line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
 
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
                         self.x_offset = x_offset 
-                        
+                        self.y_offset = int(height / 2)
+
                 
                 self.rotzLast1 = 0
                 self.rotzLast2 = 0
@@ -138,7 +142,7 @@ class autonomy(object):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 #cv2.imshow("hsv", hsv)
-                lower_yellow = np.array([20, 40, 60])
+                lower_yellow = np.array([20, 40, 55])
                 upper_yellow = np.array([32, 255, 255])
                 mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 #cv2.imshow("blue mask", mask)
@@ -242,85 +246,6 @@ class autonomy(object):
 		#rospy.loginfo(servoMsg)
 		self.servoPub.publish(servoMsg)
 
-        def forward(self, timeProcess):
-                start = time.time()
-                while (time.time() - start + timeProcess) < 1.5:
-                    if self.distance > 0.5:
-                        self.leftSpeed = 0.3
-                        self.rightSpeed = 0.3
-                    else:
-                        runtime = time.time() - start
-                        self.leftSpeed = 0
-                        self.rightSpeed = 0
-                        self.publishMotors()
-                        return runtime + timeProcess
-                    self.publishMotors()
-                self.leftSpeed = 0
-                self.rightSpeed = 0
-                self.publishMotors()
-                return -1
-
-        
-        def turnRight(self):
-                start = time.time()
-                while (time.time() - start) < 0.25:
-                    self.leftSpeed = 0.75
-                    self.rightSpeed = -0.75
-                    self.publishMotors()
-                self.leftSpeed = 0
-                self.rightSpeed = 0
-                self.publishMotors()
-        
-        def turnLeft(self):
-                start = time.time()
-                while (time.time() - start) < 0.25:
-                    self.leftSpeed = -0.7
-                    self.rightSpeed = 0.7
-                    self.publishMotors()
-                self.leftSpeed = 0
-                self.rightSpeed = 0
-                self.publishMotors()
-
-        def stop(self):
-                start = time.time()
-                while (time.time() - start) < 0.3:
-                    self.leftSpeed = 0
-                    self.rightSpeed = 0
-                    self.publishMotors()
-
-        # discrete obstacle avoidance
-        def checkObstacle(self):
-
-                leftDistance = 0
-                rightDistance = 0
-
-                #check left side
-                self.pan = 0.6
-                self.publishServo()
-                time.sleep(0.5)
-                for i in range(5):
-                    leftDistance += self.distance
-                    time.sleep(0.1)
-                
-                self.pan = 0
-                self.publishServo()               
-                time.sleep(0.3)
-
-                #check right side
-                self.pan = -0.6
-                self.publishServo()
-                time.sleep(0.5)
-                for i in range(5):
-                    rightDistance += self.distance
-                    time.sleep(0.1)
-                
-                self.pan = 0
-                self.publishServo()                
-                
-                if leftDistance > rightDistance:
-                    return 1
-                else:
-                    return -1
 
         # Calculate robot position (delta_x, delta_z) in ground frame ( based on the tag)
         # Calculate target position (0,0,0.8) in robot frame, return in polar coordinates (rho, phi)
@@ -356,199 +281,105 @@ class autonomy(object):
                 leftLast = 0
                 rightLast = 0
                 while not rospy.is_shutdown():
-                    times_since_last_fid = 0
-                    if self.isArUcoDetect is True:
-                        times_since_last_fid = 0
-                        [rhoCurr, phiCurr, delta_x, delta_z] = self.frame_transformation([[0],[-0.3]], self.trans_xz, self.rot_z)
-                        alphaCurr = np.arctan2(self.trans_xz[1], self.trans_xz[0])
-                        alphaCurr = math.degrees(alphaCurr) - 90
+                    if self.numLaneDetect != 0:
+                        angleRadian = np.arctan2(self.x_offset, self.y_offset) 
+                        angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
+                        print(angleDeg)
 
-                        # print "rho: %f, phi: %f\n" % (rhoCurr, phiCurr)
-                        rho_average = (rhoCurr + rhoLast1 + rhoLast2)/3
-                        phi_average = (phiCurr + phiLast1 + phiLast2)/3
-                        alpha_average = (alphaCurr + alphaLast1 + alphaLast2)/3
-
-                        rhoLast2 = rhoLast1
-                        rhoLast1 = rhoCurr
-                        phiLast2 = phiLast1
-                        phiLast1 = phiCurr
-                        alphaLast2 = alphaLast1
-                        alphaLast1 = alphaCurr
-                        print "rho: %f,\nphi: %f,\n alpha: %f,\ndelta_x:%f" % (rho_average, phi_average, alpha_average, delta_x)
+                        ## ********** Config paremeter ******** 
+                        kp = 0.8
+                        ki = 0.0
+                        kd = 0.020
+                        targetUltr = 0.195
+                        ## ************************************
                         
-                        if delta_x < 0.13 and delta_x > -0.13:
-                        # Robot is near the y axis of the ground frame (based on the tag)
-                            kc = 0.2
-                            if alpha_average > 5 or alpha_average < -5:
-                                # Step 2 : turn the cat head to the tag (alpha = 0) 
-                                steering_speed = kc * alpha_average
-                                # ******** Restrict output ***********
-                                steering_upper_bound = 0.16
-                                if steering_speed > steering_upper_bound:
-                                    steering_speed =steering_upper_bound 
-                                if steering_speed < -steering_upper_bound:
-                                    steering_speed = -steering_upper_bound 
-                                #*************************************
-                                self.leftSpeed = -steering_speed 
-                                self.rightSpeed = steering_speed 
-                            else:
-                                # Step 3: straight line PID control to make the car stop at distance 0.8
-
-                                ## ********** Config paremeter ******** 
-                                kp = 0.1
-                                ki = 0.0
-                                kd = 0.0
-                                targetUltr = 0.195
-                                ## ************************************
-                                
-                                errorCurr = self.trans_xz[1] - 0.8 
-                                errorSum += errorCurr * 0.01
-        
-                                integralBound = 0.3
-                                if errorSum > integralBound:
-                                    errosrSum = integralBound
-                                if errorSum < (-1 * integralBound):
-                                    errorSum = -1 * integralBound
-                                forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
-                                errorLast = errorCurr                                       
-                                                
-                                self.leftSpeed = forward_speed  
-                                self.rightSpeed = forward_speed  
-
-                            speed_upper_bound = 0.32
-                            speed_lower_bound = 0.10
-
-                            if self.leftSpeed > 0:
-                                self.leftSpeed += speed_lower_bound 
-                            if self.leftSpeed < 0:
-                                self.leftSpeed -= speed_lower_bound 
-                            if self.leftSpeed > speed_upper_bound:
-                                self.leftSpeed = speed_upper_bound
-                            if self.leftSpeed < -speed_upper_bound:
-                                self.leftSpeed = -speed_upper_bound
-
-                            if self.rightSpeed > 0:
-                                self.rightSpeed += speed_lower_bound 
-                            if self.rightSpeed < 0:
-                                self.rightSpeed -= speed_lower_bound 
-                            if self.rightSpeed > speed_upper_bound:
-                                self.rightSpeed = speed_upper_bound 
-                            if self.rightSpeed < -speed_upper_bound:
-                                self.rightSpeed = -speed_upper_bound 
-                            ## ************************************ 
-
-	    	            self.publishMotors()
-		            self.publishServo()
-                        else:
-                            # Robot is far away from y axis
-                            # Step 1 : drive robot approach y axis as much as possible
-
-                            ## ********** Config paremeter ******** 
-                            kp = 0.8
-                            ki = 0.0
-                            kd = 0.020
-                            targetUltr = 0.195
-                            ## ************************************
-                            
-                            errorCurr = self.trans_xz[1] - 0.8 
-                            errorSum += errorCurr * 0.01
+                       # errorCurr = angleDeg 
+                       # errorSum += errorCurr * 0.01
     
-                            integralBound = 0.3
-                            if errorSum > integralBound:
-                                errosrSum = integralBound
-                            if errorSum < (-1 * integralBound):
-                                errorSum = -1 * integralBound
-                            forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
-                            errorLast = errorCurr                                       
-                                                   
-                            # ******** Restrict output ***********
-                            forward_upper_bound = 0.05
-                            if forward_speed > forward_upper_bound:
-                                forward_speed  = forward_upper_bound 
-                            if forward_speed < -forward_upper_bound:
-                                forward_speed = -forward_upper_bound 
-                            #*************************************
+                       # integralBound = 0.3
+                       # if errorSum > integralBound:
+                       #     errosrSum = integralBound
+                       # if errorSum < (-1 * integralBound):
+                       #     errorSum = -1 * integralBound
+                       # forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
+                       # errorLast = errorCurr                                       
+                       #                        
+                       # # ******** Restrict output ***********
+                       # forward_upper_bound = 0.05
+                       # if forward_speed > forward_upper_bound:
+                       #     forward_speed  = forward_upper_bound 
+                       # if forward_speed < -forward_upper_bound:
+                       #     forward_speed = -forward_upper_bound 
+                       # #*************************************
 
-                            if phi_average > 25:
-                                phi_average = 25
-                            if phi_average < -25:
-                                phi_average = -25
-                            ks = 0.04
-                            kc = 0.15
-                            kxp = 2.5
-                            kxi = 8.0
-                            self.leftSpeed = forward_speed 
-                            self.rightSpeed = forward_speed 
-                            
-                            # Check whether it's going to loss vision
-                            if alpha_average > 20 or alpha_average < -20:
-                                # If alpha is too large, turn a little bit to make sure tag can still be captured by camera
-                                steering_speed = kc * alpha_average
-                            else:
-                                # Use PI controller to make robot approach y axis
-                                delta_x_sum += delta_x * 0.01
-                                steering_speed = kxp * delta_x + kxi * delta_x_sum 
-                                
-                                # ******** Restrict output ***********
-                                steering_upper_bound = 0.18
-                                if steering_speed > steering_upper_bound:
-                                    steering_speed =steering_upper_bound 
-                                if steering_speed < -steering_upper_bound:
-                                    steering_speed = -steering_upper_bound 
-                                #*************************************
+                       # if phi_average > 25:
+                       #     phi_average = 25
+                       # if phi_average < -25:
+                       #     phi_average = -25
+                       # ks = 0.04
+                       # kc = 0.15
+                       # kxp = 2.5
+                       # kxi = 8.0
+                       # self.leftSpeed = forward_speed 
+                       # self.rightSpeed = forward_speed 
+                       # 
+                       # # Check whether it's going to loss vision
+                       # if alpha_average > 20 or alpha_average < -20:
+                       #     # If alpha is too large, turn a little bit to make sure tag can still be captured by camera
+                       #     steering_speed = kc * alpha_average
+                       # else:
+                       #     # Use PI controller to make robot approach y axis
+                       #     delta_x_sum += delta_x * 0.01
+                       #     steering_speed = kxp * delta_x + kxi * delta_x_sum 
+                       #     
+                       #     # ******** Restrict output ***********
+                       #     steering_upper_bound = 0.18
+                       #     if steering_speed > steering_upper_bound:
+                       #         steering_speed =steering_upper_bound 
+                       #     if steering_speed < -steering_upper_bound:
+                       #         steering_speed = -steering_upper_bound 
+                       #     #*************************************
 
-                            print "forward speed: %f\n" % forward_speed
-                            print "steering speed: %f\n" % steering_speed
-                            
-                            if steering_speed < 0:
-                                self.leftSpeed = forward_speed  - steering_speed 
-                            if steering_speed > 0:
-                                self.rightSpeed = forward_speed + steering_speed 
+                       # print "forward speed: %f\n" % forward_speed
+                       # print "steering speed: %f\n" % steering_speed
+                       # 
+                       # if steering_speed < 0:
+                       #     self.leftSpeed = forward_speed  - steering_speed 
+                       # if steering_speed > 0:
+                       #     self.rightSpeed = forward_speed + steering_speed 
 
-                            # Minimum forward_speed for the car to start moving
-                            speed_upper_bound = 0.30
-                            speed_lower_bound = 0.05
+                       # # Minimum forward_speed for the car to start moving
+                       # speed_upper_bound = 0.30
+                       # speed_lower_bound = 0.05
 
-                            if self.leftSpeed > 0:
-                                self.leftSpeed += speed_lower_bound 
-                            if self.leftSpeed < 0:
-                                self.leftSpeed -= speed_lower_bound 
-                            if self.leftSpeed > speed_upper_bound:
-                                self.leftSpeed = speed_upper_bound
-                            if self.leftSpeed < -speed_upper_bound:
-                                self.leftSpeed = -speed_upper_bound
+                       # if self.leftSpeed > 0:
+                       #     self.leftSpeed += speed_lower_bound 
+                       # if self.leftSpeed < 0:
+                       #     self.leftSpeed -= speed_lower_bound 
+                       # if self.leftSpeed > speed_upper_bound:
+                       #     self.leftSpeed = speed_upper_bound
+                       # if self.leftSpeed < -speed_upper_bound:
+                       #     self.leftSpeed = -speed_upper_bound
 
-                            if self.rightSpeed > 0:
-                                self.rightSpeed += speed_lower_bound 
-                            if self.rightSpeed < 0:
-                                self.rightSpeed -= speed_lower_bound 
-                            if self.rightSpeed > speed_upper_bound:
-                                self.rightSpeed = speed_upper_bound 
-                            if self.rightSpeed < -speed_upper_bound:
-                                self.rightSpeed = -speed_upper_bound 
-                            ## ************************************ 
-                            
-	    	            self.publishMotors()
-		            self.publishServo()
+                       # if self.rightSpeed > 0:
+                       #     self.rightSpeed += speed_lower_bound 
+                       # if self.rightSpeed < 0:
+                       #     self.rightSpeed -= speed_lower_bound 
+                       # if self.rightSpeed > speed_upper_bound:
+                       #     self.rightSpeed = speed_upper_bound 
+                       # if self.rightSpeed < -speed_upper_bound:
+                       #     self.rightSpeed = -speed_upper_bound 
+                       # ## ************************************ 
+                       # 
+	    	       # self.publishMotors()
 
-                        leftLast = self.leftSpeed 
-                        rightLast = self.rightSpeed 
+                       # leftLast = self.leftSpeed 
+                       # rightLast = self.rightSpeed 
                     else:
-                        # If lost vision, try turning in the opposite derection
-
-                        times_since_last_fid += 1
-                        if times_since_last_fid < 10:
-                            if leftLast < rightLast:
-                                self.leftSpeed = 0.25
-                                self.rightSpeed = -0.25
-                            else:
-                                self.leftSpeed = -0.25
-                                self.rightSpeed = 0.25
-                        else:
-                            self.leftSpeed = 0
-                            self.rightSpeed = 0
+                        self.rightSpeed = 0
+                        self.leftSpeed = 0
                         self.publishMotors()
-
+                    
 		    self.rate.sleep()
 
 
