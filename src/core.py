@@ -74,6 +74,7 @@ class autonomy(object):
 
                         # Calculate mid lane
                         self.numLaneDetect = 0
+                        x_offset = 0
                         if len(lane_lines) == 2:
                             self.numLaneDetect = 2
                             _, _, left_x2, _ = lane_lines[0][0]
@@ -142,8 +143,15 @@ class autonomy(object):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 #cv2.imshow("hsv", hsv)
-                lower_yellow = np.array([20, 40, 55])
-                upper_yellow = np.array([32, 255, 255])
+
+                # Lab
+                #lower_yellow = np.array([20, 40, 55])
+                #upper_yellow = np.array([32, 255, 255])
+                
+                # Home
+                lower_yellow = np.array([20, 33, 83])
+                upper_yellow = np.array([36, 200, 127])
+               
                 mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 #cv2.imshow("blue mask", mask)
                 # detect edges
