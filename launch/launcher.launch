@@ -6,7 +6,7 @@
 <node pkg="autonomy" name="core" type="core.py"/>
 <node pkg="autonomy" name="motorDriver" type="motorDriver.py"/>
 
-<include file="$(find raspicam_node)/launch/camerav2_1280x720.launch">
+<include file="$(find raspicam_node)/launch/camerav3_1280x720.launch">
 	<arg name="enable_raw" value="true"/>
 </include>
 
