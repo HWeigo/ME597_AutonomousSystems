@@ -60,9 +60,8 @@ class autonomy(object):
 			except CvBridgeError as e:
 				print(e)
 
-			##Place image processing code here!
                         #print "Processing image."
-                        cv2.imshow("original image", frame)
+                        frame = self.reduce_resolution(frame, 50)        
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
 
@@ -138,7 +137,20 @@ class autonomy(object):
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(10)
-    
+
+        def reduce_resolution(self, frame, scale_percent):
+                #calculate the 50 percent of original dimensions
+                width = int(frame.shape[1] * scale_percent / 100)
+                height = int(frame.shape[0] * scale_percent / 100)
+
+                # dsize
+                dsize = (width, height)
+
+                # resize image
+                frame = cv2.resize(frame, dsize)
+                
+                return frame 
+
         def detect_edges(self, frame):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
