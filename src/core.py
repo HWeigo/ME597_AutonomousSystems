@@ -61,7 +61,7 @@ class autonomy(object):
 				print(e)
 
                         #print "Processing image."
-                        frame = self.reduce_resolution(frame, 50)        
+                        frame = self.reduce_resolution(frame, 30)        
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
 
@@ -288,31 +288,67 @@ class autonomy(object):
                     return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
 
         def runner(self):
-                errorSum = 0;
-	        errorLast = 0
-                rhoLast1 = 0
-                rhoLast2 = 0
-                phiLast1 = 0
-                phiLast2 = 0
-                alphaLast1 = 0
-                alphaLast2 = 0
-                alpha_average = 0
-                delta_x_sum = 0
-                leftLast = 0
-                rightLast = 0
+                angleDegLast1 = 0
+                angleDegLast2 = 0
                 while not rospy.is_shutdown():
                     if self.numLaneDetect != 0:
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
-                        print(angleDeg)
+                        angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
+                        angleDegLast2 = angleDegLast1 
+                        angleDegLast1 = angleDeg 
+                        print(angleDegAvg)
+
+                        #curr_steering_angle = angleDeg 
+                        if self.numLaneDetect == 1:
+                            forward_speed = 0.08
+                            max_angle_deviation = 0.14
+                        if self.numLaneDetect == 2:
+                            forward_speed = 0.11
+                            max_angle_deviation = 0.04
+
+                        #angle_deviation = curr_steering_angle - last_steering_speed
+                        #if abs(angle_deviation) > max_angle_deviation:
+                        #    last_steering_speed 
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.8
+                        kp = 0.07
                         ki = 0.0
-                        kd = 0.020
-                        targetUltr = 0.195
+                        kd = 0.0
                         ## ************************************
                         
+                        steering_speed = kp * angleDegAvg 
+                        if abs(steering_speed) > max_angle_deviation:
+                            steering_speed = max_angle_deviation 
+                        
+                        self.leftSpeed = forward_speed  + steering_speed 
+                        self.rightSpeed = forward_speed - steering_speed 
+
+                        # Minimum forward_speed for the car to start moving
+                        speed_upper_bound = 0.30
+                        speed_lower_bound = 0.12
+
+                        if self.leftSpeed > 0:
+                            self.leftSpeed += speed_lower_bound 
+                        if self.leftSpeed < 0:
+                            self.leftSpeed -= speed_lower_bound 
+                        if self.leftSpeed > speed_upper_bound:
+                            self.leftSpeed = speed_upper_bound
+                        if self.leftSpeed < -speed_upper_bound:
+                            self.leftSpeed = -speed_upper_bound
+
+                        if self.rightSpeed > 0:
+                            self.rightSpeed += speed_lower_bound 
+                        if self.rightSpeed < 0:
+                            self.rightSpeed -= speed_lower_bound 
+                        if self.rightSpeed > speed_upper_bound:
+                            self.rightSpeed = speed_upper_bound 
+                        if self.rightSpeed < -speed_upper_bound:
+                            self.rightSpeed = -speed_upper_bound 
+                        ## ************************************ 
+                        
+	    	        self.publishMotors()                       
+
                        # errorCurr = angleDeg 
                        # errorSum += errorCurr * 0.01
     
@@ -363,35 +399,7 @@ class autonomy(object):
                        # print "forward speed: %f\n" % forward_speed
                        # print "steering speed: %f\n" % steering_speed
                        # 
-                       # if steering_speed < 0:
-                       #     self.leftSpeed = forward_speed  - steering_speed 
-                       # if steering_speed > 0:
-                       #     self.rightSpeed = forward_speed + steering_speed 
 
-                       # # Minimum forward_speed for the car to start moving
-                       # speed_upper_bound = 0.30
-                       # speed_lower_bound = 0.05
-
-                       # if self.leftSpeed > 0:
-                       #     self.leftSpeed += speed_lower_bound 
-                       # if self.leftSpeed < 0:
-                       #     self.leftSpeed -= speed_lower_bound 
-                       # if self.leftSpeed > speed_upper_bound:
-                       #     self.leftSpeed = speed_upper_bound
-                       # if self.leftSpeed < -speed_upper_bound:
-                       #     self.leftSpeed = -speed_upper_bound
-
-                       # if self.rightSpeed > 0:
-                       #     self.rightSpeed += speed_lower_bound 
-                       # if self.rightSpeed < 0:
-                       #     self.rightSpeed -= speed_lower_bound 
-                       # if self.rightSpeed > speed_upper_bound:
-                       #     self.rightSpeed = speed_upper_bound 
-                       # if self.rightSpeed < -speed_upper_bound:
-                       #     self.rightSpeed = -speed_upper_bound 
-                       # ## ************************************ 
-                       # 
-	    	       # self.publishMotors()
 
                        # leftLast = self.leftSpeed 
                        # rightLast = self.rightSpeed 
