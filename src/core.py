@@ -61,7 +61,7 @@ class autonomy(object):
 				print(e)
 
                         #print "Processing image."
-                        frame = self.reduce_resolution(frame, 30)        
+                        frame = self.reduce_resolution(frame, 18)        
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
 
@@ -297,15 +297,15 @@ class autonomy(object):
                         angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
-                        print(angleDegAvg)
+                        #print(angleDegAvg)
 
                         #curr_steering_angle = angleDeg 
                         if self.numLaneDetect == 1:
                             forward_speed = 0.08
-                            max_angle_deviation = 0.14
+                            max_angle_deviation = 0.1
                         if self.numLaneDetect == 2:
                             forward_speed = 0.11
-                            max_angle_deviation = 0.04
+                            max_angle_deviation = 0.06
 
                         #angle_deviation = curr_steering_angle - last_steering_speed
                         #if abs(angle_deviation) > max_angle_deviation:
@@ -326,7 +326,7 @@ class autonomy(object):
 
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
-                        speed_lower_bound = 0.12
+                        speed_lower_bound = 0.1
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
