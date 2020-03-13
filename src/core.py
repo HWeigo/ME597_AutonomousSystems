@@ -161,8 +161,8 @@ class autonomy(object):
                 #upper_yellow = np.array([32, 255, 255])
                 
                 # Home
-                lower_yellow = np.array([20, 33, 83])
-                upper_yellow = np.array([36, 200, 127])
+                lower_yellow = np.array([20, 140, 175])
+                upper_yellow = np.array([33, 237, 238])
                
                 mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 #cv2.imshow("blue mask", mask)
