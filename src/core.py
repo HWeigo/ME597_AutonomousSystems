@@ -290,6 +290,8 @@ class autonomy(object):
         def runner(self):
                 angleDegLast1 = 0
                 angleDegLast2 = 0
+                curr_steering_angle = 0
+                last_steering_angle = 0
                 while not rospy.is_shutdown():
                     if self.numLaneDetect != 0:
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
@@ -298,8 +300,8 @@ class autonomy(object):
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
                         #print(angleDegAvg)
-
-                        #curr_steering_angle = angleDeg 
+                        
+                        # Controller 1
                         if self.numLaneDetect == 1:
                             forward_speed = 0.08
                             max_angle_deviation = 0.1
@@ -312,7 +314,7 @@ class autonomy(object):
                         #    last_steering_speed 
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.07
+                        kp = 0.03
                         ki = 0.0
                         kd = 0.0
                         ## ************************************
@@ -321,9 +323,46 @@ class autonomy(object):
                         if abs(steering_speed) > max_angle_deviation:
                             steering_speed = max_angle_deviation 
                         
+                       # # Controller 2
+                       # max_angle_deviation_two_lines = 0.1
+                       # max_angle_deviation_one_lane = 0.02
+                       # if self.numLaneDetect == 2 :
+                       #     # if both lane lines detected, then we can deviate more
+                       #     max_angle_deviation = max_angle_deviation_two_lines
+                       #     forward_speed = 0.1 
+                       # else :
+                       #     # if only one lane detected, don't deviate too much
+                       #     max_angle_deviation = max_angle_deviation_one_lane
+                       #     forward_speed = 0.12
+
+                       # new_steering_angle = angleDegAvg 
+                       # print("ang" + str(angleDeg))
+                       # angle_deviation = new_steering_angle - curr_steering_angle
+                       # if abs(angle_deviation) > max_angle_deviation:
+                       #     stabilized_steering_angle = curr_steering_angle  + max_angle_deviation * angle_deviation / abs(angle_deviation)
+                       # else:
+                       #     stabilized_steering_angle = new_steering_angle 
+                       # curr_steering_angle = new_steering_angle 
+                       #     
+                       # ## ********** Config paremeter ******** 
+                       # kp = 0.02
+                       # ki = 0.0
+                       # kd = 0.02
+                       # max_steering_speed = 0.15
+                       # ## ************************************
+                       # 
+                       # print(stabilized_steering_angle)
+                       # steering_speed = kp * stabilized_steering_angle + kd * (stabilized_steering_angle-last_steering_angle)/100 
+                       # if abs(steering_speed) > max_steering_speed:
+                       #     steering_speed = max_steering_speed
+                       # last_steering_angle = stabilized_steering_angle 
+                       # #print(steering_speed)                        
+                        
+                        
+                        
                         self.leftSpeed = forward_speed  + steering_speed 
                         self.rightSpeed = forward_speed - steering_speed 
-
+                        print(steering_speed)
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
                         speed_lower_bound = 0.1
