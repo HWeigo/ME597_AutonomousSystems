@@ -100,7 +100,7 @@ class autonomy(object):
 
 
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
-                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
+                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
                         self.x_offset = x_offset 
                         self.y_offset = int(height / 2)
 
@@ -292,8 +292,10 @@ class autonomy(object):
                 angleDegLast2 = 0
                 curr_steering_angle = 0
                 last_steering_angle = 0
+                sum_angle = 0
                 while not rospy.is_shutdown():
-                    if self.numLaneDetect != 0:
+                    if self.numLaneDetect != 0 and self.distance > 0.3:
+                    #if self.numLaneDetect != 0:
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
                         angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
@@ -303,69 +305,36 @@ class autonomy(object):
                         
                         # Controller 1
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.09
-                            max_angle_deviation = 0.09 
+                            forward_speed = 0.11
+                            max_angle_deviation = 0.11 
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.09
-                            max_angle_deviation = 0.02
+                            forward_speed = 0.12
+                            max_angle_deviation = 0.015
 
                         #angle_deviation = curr_steering_angle - last_steering_speed
                         #if abs(angle_deviation) > max_angle_deviation:
                         #    last_steering_speed 
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.03
-                        ki = 0.0
+                        kp = 0.025
+                        ki = 0.012
                         kd = 0.0
                         ## ************************************
                         
-                        steering_speed = kp * angleDegAvg 
+                        if abs(angleDegAvg) > 35:
+                            sum_angle = sum_angle + angleDegAvg * 0.01
+                        else:
+                            sum_angle = 0
+                        steering_speed = kp * angleDegAvg + ki * sum_angle 
                         if abs(steering_speed) > max_angle_deviation:
                             steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
                         
-                       # # Controller 2
-                       # max_angle_deviation_two_lines = 0.1
-                       # max_angle_deviation_one_lane = 0.02
-                       # if self.numLaneDetect == 2 :
-                       #     # if both lane lines detected, then we can deviate more
-                       #     max_angle_deviation = max_angle_deviation_two_lines
-                       #     forward_speed = 0.1 
-                       # else :
-                       #     # if only one lane detected, don't deviate too much
-                       #     max_angle_deviation = max_angle_deviation_one_lane
-                       #     forward_speed = 0.12
-
-                       # new_steering_angle = angleDegAvg 
-                       # print("ang" + str(angleDeg))
-                       # angle_deviation = new_steering_angle - curr_steering_angle
-                       # if abs(angle_deviation) > max_angle_deviation:
-                       #     stabilized_steering_angle = curr_steering_angle  + max_angle_deviation * angle_deviation / abs(angle_deviation)
-                       # else:
-                       #     stabilized_steering_angle = new_steering_angle 
-                       # curr_steering_angle = new_steering_angle 
-                       #     
-                       # ## ********** Config paremeter ******** 
-                       # kp = 0.02
-                       # ki = 0.0
-                       # kd = 0.02
-                       # max_steering_speed = 0.15
-                       # ## ************************************
-                       # 
-                       # print(stabilized_steering_angle)
-                       # steering_speed = kp * stabilized_steering_angle + kd * (stabilized_steering_angle-last_steering_angle)/100 
-                       # if abs(steering_speed) > max_steering_speed:
-                       #     steering_speed = max_steering_speed
-                       # last_steering_angle = stabilized_steering_angle 
-                       # #print(steering_speed)                        
-                        
-                        
-                        
                         self.leftSpeed = forward_speed  + steering_speed 
                         self.rightSpeed = forward_speed - steering_speed 
-                        print(steering_speed)
+                        #print(steering_speed)
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
-                        speed_lower_bound = 0.1
+                        speed_lower_bound = 0.125
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
@@ -388,60 +357,6 @@ class autonomy(object):
                         
 	    	        self.publishMotors()                       
 
-                       # errorCurr = angleDeg 
-                       # errorSum += errorCurr * 0.01
-    
-                       # integralBound = 0.3
-                       # if errorSum > integralBound:
-                       #     errosrSum = integralBound
-                       # if errorSum < (-1 * integralBound):
-                       #     errorSum = -1 * integralBound
-                       # forward_speed  = kp * errorCurr + ki * errorSum + kd * (errorCurr - errorLast) / 0.01 # Calculate PID output
-                       # errorLast = errorCurr                                       
-                       #                        
-                       # # ******** Restrict output ***********
-                       # forward_upper_bound = 0.05
-                       # if forward_speed > forward_upper_bound:
-                       #     forward_speed  = forward_upper_bound 
-                       # if forward_speed < -forward_upper_bound:
-                       #     forward_speed = -forward_upper_bound 
-                       # #*************************************
-
-                       # if phi_average > 25:
-                       #     phi_average = 25
-                       # if phi_average < -25:
-                       #     phi_average = -25
-                       # ks = 0.04
-                       # kc = 0.15
-                       # kxp = 2.5
-                       # kxi = 8.0
-                       # self.leftSpeed = forward_speed 
-                       # self.rightSpeed = forward_speed 
-                       # 
-                       # # Check whether it's going to loss vision
-                       # if alpha_average > 20 or alpha_average < -20:
-                       #     # If alpha is too large, turn a little bit to make sure tag can still be captured by camera
-                       #     steering_speed = kc * alpha_average
-                       # else:
-                       #     # Use PI controller to make robot approach y axis
-                       #     delta_x_sum += delta_x * 0.01
-                       #     steering_speed = kxp * delta_x + kxi * delta_x_sum 
-                       #     
-                       #     # ******** Restrict output ***********
-                       #     steering_upper_bound = 0.18
-                       #     if steering_speed > steering_upper_bound:
-                       #         steering_speed =steering_upper_bound 
-                       #     if steering_speed < -steering_upper_bound:
-                       #         steering_speed = -steering_upper_bound 
-                       #     #*************************************
-
-                       # print "forward speed: %f\n" % forward_speed
-                       # print "steering speed: %f\n" % steering_speed
-                       # 
-
-
-                       # leftLast = self.leftSpeed 
-                       # rightLast = self.rightSpeed 
                     else:
                         self.rightSpeed = 0
                         self.leftSpeed = 0
