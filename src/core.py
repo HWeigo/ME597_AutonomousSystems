@@ -303,11 +303,11 @@ class autonomy(object):
                         
                         # Controller 1
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.08
-                            max_angle_deviation = 0.1
+                            forward_speed = 0.1 
+                            max_angle_deviation = 0.1 
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.11
-                            max_angle_deviation = 0.06
+                            forward_speed = 0.09
+                            max_angle_deviation = 0.04
 
                         #angle_deviation = curr_steering_angle - last_steering_speed
                         #if abs(angle_deviation) > max_angle_deviation:
@@ -321,7 +321,7 @@ class autonomy(object):
                         
                         steering_speed = kp * angleDegAvg 
                         if abs(steering_speed) > max_angle_deviation:
-                            steering_speed = max_angle_deviation 
+                            steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
                         
                        # # Controller 2
                        # max_angle_deviation_two_lines = 0.1
@@ -365,7 +365,7 @@ class autonomy(object):
                         print(steering_speed)
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
-                        speed_lower_bound = 0.1
+                        speed_lower_bound = 0.13
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
