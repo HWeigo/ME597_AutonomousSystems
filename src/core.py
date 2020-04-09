@@ -118,7 +118,7 @@ class autonomy(object):
                                 
                         if id is 2:
                                 self.isArUcoDetect = True
-                                
+                                print "Detect" 
 
 
 		#Subscribe to topics
@@ -134,7 +134,7 @@ class autonomy(object):
 		motorMsg = motors()
 		motorMsg.leftSpeed = self.leftSpeed
 		motorMsg.rightSpeed = self.rightSpeed
-		rospy.loginfo(motorMsg)
+		#rospy.loginfo(motorMsg)
 		self.motorPub.publish(motorMsg)
 
 	def publishServo(self):
