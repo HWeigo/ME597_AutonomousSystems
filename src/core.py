@@ -109,12 +109,16 @@ class autonomy(object):
                 self.rotzLast2 = 0
 		def fiducialNav(data):
                     id = -1
-                    #print "FiducialNav callback"
-                    self.isArUcoDetect = False
-
+                    print "FiducialNav callback"
+                   # if data.transforms:
+                   #     self.isArUcoDetect = True
+                   #     print "detect aruco"
+                   # else:
+                   #     self.isArUcoDetect = False
+                    
 		    for m in data.transforms:
-			id = m.fiducial_id
-			trans = m.transform.translation
+		        id = m.fiducial_id
+		        trans = m.transform.translation
                         rot = m.transform.rotation
                         print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
                         self.trans_xz = [trans.x, trans.z]
@@ -125,7 +129,8 @@ class autonomy(object):
                         print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
                                 
                         if id is 2:
-                                self.isArUcoDetect = True
+                            self.isArUcoDetect = True
+                            print "detect aruco"
                                 
 
 
@@ -133,7 +138,7 @@ class autonomy(object):
 		rospy.Subscriber('raspicam_node/image', Image, imageProcessing)
 		rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
-		#rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
+                rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(10)
@@ -361,8 +366,8 @@ class autonomy(object):
                    #     self.rightSpeed = 0
                    #     self.leftSpeed = 0
                    #     self.publishMotors()
-                    self.rightSpeed = 0.5
-                    self.leftSpeed = 0.5
+                    self.rightSpeed = 0.2
+                    self.leftSpeed = 0.2
                     self.publishMotors()
 		    self.rate.sleep()
 
