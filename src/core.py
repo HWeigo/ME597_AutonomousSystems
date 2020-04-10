@@ -99,7 +99,7 @@ class autonomy(object):
                         line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
 
-                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
+                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
                         self.x_offset = x_offset 
                         self.y_offset = int(height / 2)
@@ -299,77 +299,77 @@ class autonomy(object):
                 last_steering_angle = 0
                 sum_angle = 0
                 while not rospy.is_shutdown():
-                   # if self.numLaneDetect != 0 and self.distance > 0.3:
-                   # #if self.numLaneDetect != 0:
-                   #     angleRadian = np.arctan2(self.x_offset, self.y_offset) 
-                   #     angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
-                   #     angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
-                   #     angleDegLast2 = angleDegLast1 
-                   #     angleDegLast1 = angleDeg 
-                   #     #print(angleDegAvg)
-                   #     
-                   #     # Controller 1
-                   #     if self.numLaneDetect == 1:
-                   #         forward_speed = 0.11
-                   #         max_angle_deviation = 0.11 
-                   #     if self.numLaneDetect == 2:
-                   #         forward_speed = 0.12
-                   #         max_angle_deviation = 0.015
+                    if self.numLaneDetect != 0 and self.distance > 0.3:
+                    #if self.numLaneDetect != 0:
+                        angleRadian = np.arctan2(self.x_offset, self.y_offset) 
+                        angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
+                        angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
+                        angleDegLast2 = angleDegLast1 
+                        angleDegLast1 = angleDeg 
+                        #print(angleDegAvg)
+                        
+                        # Controller 1
+                        if self.numLaneDetect == 1:
+                            forward_speed = 0.08
+                            max_angle_deviation = 0.085 
+                        if self.numLaneDetect == 2:
+                            forward_speed = 0.08
+                            max_angle_deviation = 0.02
 
-                   #     #angle_deviation = curr_steering_angle - last_steering_speed
-                   #     #if abs(angle_deviation) > max_angle_deviation:
-                   #     #    last_steering_speed 
+                        #angle_deviation = curr_steering_angle - last_steering_speed
+                        #if abs(angle_deviation) > max_angle_deviation:
+                        #    last_steering_speed 
 
-                   #     ## ********** Config paremeter ******** 
-                   #     kp = 0.025
-                   #     ki = 0.012
-                   #     kd = 0.0
-                   #     ## ************************************
-                   #     
-                   #     if abs(angleDegAvg) > 35:
-                   #         sum_angle = sum_angle + angleDegAvg * 0.01
-                   #     else:
-                   #         sum_angle = 0
-                   #     steering_speed = kp * angleDegAvg + ki * sum_angle 
-                   #     if abs(steering_speed) > max_angle_deviation:
-                   #         steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
-                   #     
-                   #     self.leftSpeed = forward_speed  + steering_speed 
-                   #     self.rightSpeed = forward_speed - steering_speed 
-                   #     #print(steering_speed)
-                   #     # Minimum forward_speed for the car to start moving
-                   #     speed_upper_bound = 0.30
-                   #     speed_lower_bound = 0.125
+                        ## ********** Config paremeter ******** 
+                        kp = 0.01
+                        ki = 0.012
+                        kd = 0.0
+                        ## ************************************
+                        
+                        if abs(angleDegAvg) > 35:
+                            sum_angle = sum_angle + angleDegAvg * 0.01
+                        else:
+                            sum_angle = 0
+                        steering_speed = kp * angleDegAvg + ki * sum_angle 
+                        if abs(steering_speed) > max_angle_deviation:
+                            steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
+                        
+                        self.leftSpeed = forward_speed  + steering_speed 
+                        self.rightSpeed = forward_speed - steering_speed 
+                        #print(steering_speed)
+                        # Minimum forward_speed for the car to start moving
+                        speed_upper_bound = 0.30
+                        speed_lower_bound = 0.1
 
-                   #     if self.leftSpeed > 0:
-                   #         self.leftSpeed += speed_lower_bound 
-                   #     if self.leftSpeed < 0:
-                   #         self.leftSpeed -= speed_lower_bound 
-                   #     if self.leftSpeed > speed_upper_bound:
-                   #         self.leftSpeed = speed_upper_bound
-                   #     if self.leftSpeed < -speed_upper_bound:
-                   #         self.leftSpeed = -speed_upper_bound
+                        if self.leftSpeed > 0:
+                            self.leftSpeed += speed_lower_bound 
+                        if self.leftSpeed < 0:
+                            self.leftSpeed -= speed_lower_bound 
+                        if self.leftSpeed > speed_upper_bound:
+                            self.leftSpeed = speed_upper_bound
+                        if self.leftSpeed < -speed_upper_bound:
+                            self.leftSpeed = -speed_upper_bound
 
-                   #     if self.rightSpeed > 0:
-                   #         self.rightSpeed += speed_lower_bound 
-                   #     if self.rightSpeed < 0:
-                   #         self.rightSpeed -= speed_lower_bound 
-                   #     if self.rightSpeed > speed_upper_bound:
-                   #         self.rightSpeed = speed_upper_bound 
-                   #     if self.rightSpeed < -speed_upper_bound:
-                   #         self.rightSpeed = -speed_upper_bound 
-                   #     ## ************************************ 
-                   #     
-	    	   #     self.publishMotors()                       
+                        if self.rightSpeed > 0:
+                            self.rightSpeed += speed_lower_bound 
+                        if self.rightSpeed < 0:
+                            self.rightSpeed -= speed_lower_bound 
+                        if self.rightSpeed > speed_upper_bound:
+                            self.rightSpeed = speed_upper_bound 
+                        if self.rightSpeed < -speed_upper_bound:
+                            self.rightSpeed = -speed_upper_bound 
+                        ## ************************************ 
+                        
+	    	        self.publishMotors()                       
 
-                   # else:
-                   #     self.rightSpeed = 0
-                   #     self.leftSpeed = 0
-                   #     self.publishMotors()
-                    self.rightSpeed = 0.2
-                    self.leftSpeed = 0.2
-                    self.publishMotors()
-		    self.rate.sleep()
+                    else:
+                        self.rightSpeed = 0
+                        self.leftSpeed = 0
+                        self.publishMotors()
+                    #self.rightSpeed = 0.2
+                    #self.leftSpeed = 0.2
+                    #self.publishMotors()
+                    self.rate.sleep()
 
 
 if __name__ == '__main__':
