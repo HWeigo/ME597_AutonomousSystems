@@ -99,8 +99,8 @@ class autonomy(object):
                         line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
 
-                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
-                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
                         self.x_offset = x_offset 
                         self.y_offset = int(height / 2)
 
@@ -166,10 +166,10 @@ class autonomy(object):
                 #upper_yellow = np.array([32, 255, 255])
                 
                 # Home
-                lower_yellow = np.array([20, 140, 175])
-                upper_yellow = np.array([33, 237, 238])
+                lower_black = np.array([180*0.03, 255*0.25, 255*0.16])
+                upper_black = np.array([180*0.22, 255*0.75, 255*0.37])
                
-                mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+                mask = cv2.inRange(hsv, lower_black, upper_black)
                 #cv2.imshow("blue mask", mask)
                 # detect edges
                 edges = cv2.Canny(mask, 200, 400)
