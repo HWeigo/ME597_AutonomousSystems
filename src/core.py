@@ -109,7 +109,7 @@ class autonomy(object):
                 self.rotzLast2 = 0
 		def fiducialNav(data):
                     id = -1
-                    print "FiducialNav callback"
+#                    print "FiducialNav callback"
                    # if data.transforms:
                    #     self.isArUcoDetect = True
                    #     print "detect aruco"
@@ -165,10 +165,14 @@ class autonomy(object):
                 #lower_yellow = np.array([20, 40, 55])
                 #upper_yellow = np.array([32, 255, 255])
                 
-                # Home
-                lower_black = np.array([180*0.03, 255*0.25, 255*0.16])
-                upper_black = np.array([180*0.22, 255*0.75, 255*0.37])
-               
+                # Home Day Time
+               # lower_black = np.array([180*0.03, 255*0.25, 255*0.16])
+               #  upper_black = np.array([180*0.22, 255*0.75, 255*0.37])
+ 
+                # Home Night Time
+                lower_black = np.array([180*0.03, 255*0.0, 255*0.10])
+                upper_black = np.array([180*0.22, 255*0.5, 255*0.24])              
+                
                 mask = cv2.inRange(hsv, lower_black, upper_black)
                 #cv2.imshow("blue mask", mask)
                 # detect edges
@@ -300,7 +304,7 @@ class autonomy(object):
                 sum_angle = 0
                 while not rospy.is_shutdown():
                     if self.numLaneDetect != 0 and self.distance > 0.3:
-                    #if self.numLaneDetect != 0:
+                        # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
                         angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
@@ -308,38 +312,33 @@ class autonomy(object):
                         angleDegLast1 = angleDeg 
                         #print(angleDegAvg)
                         
-                        # Controller 1
+                        # PID Controller
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.08
-                            max_angle_deviation = 0.085 
+                            forward_speed = 0.075
+                            max_angle_deviation = 0.08
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.08
-                            max_angle_deviation = 0.02
-
-                        #angle_deviation = curr_steering_angle - last_steering_speed
-                        #if abs(angle_deviation) > max_angle_deviation:
-                        #    last_steering_speed 
+                            forward_speed = 0.09
+                            max_angle_deviation = 0.015
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.01
-                        ki = 0.012
-                        kd = 0.0
+                        kp = 0.002
+                        ki = 0.001
+                        kd = 0.04
                         ## ************************************
                         
                         if abs(angleDegAvg) > 35:
                             sum_angle = sum_angle + angleDegAvg * 0.01
                         else:
                             sum_angle = 0
-                        steering_speed = kp * angleDegAvg + ki * sum_angle 
+                        steering_speed = kp * angleDegAvg + ki * sum_angle + kd * (angleDeg - angleDegLast1)/0.01  
                         if abs(steering_speed) > max_angle_deviation:
                             steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
                         
                         self.leftSpeed = forward_speed  + steering_speed 
                         self.rightSpeed = forward_speed - steering_speed 
-                        #print(steering_speed)
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
-                        speed_lower_bound = 0.1
+                        speed_lower_bound = 0.10
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
