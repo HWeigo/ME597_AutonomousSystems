@@ -109,7 +109,7 @@ class autonomy(object):
                 self.rotzLast2 = 0
 		def fiducialNav(data):
                     id = -1
-#                    print "FiducialNav callback"
+                    print "FiducialNav callback"
                    # if data.transforms:
                    #     self.isArUcoDetect = True
                    #     print "detect aruco"

@@ -15,6 +15,7 @@
 <remap from="/camera_info" to="/raspicam_node/camera_info" />
 <remap from="/camera" to="/raspicam_node/image" />
 <param name="publish_images" value="False"/>
+<param name="dictionary" value="0"/>
 </node>
 
 </launch>
