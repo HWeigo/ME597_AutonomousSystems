@@ -34,8 +34,10 @@ class autonomy(object):
                 self.rot_z = 0
                 self.x_offset = 0
                 self.y_offset = 1
+                self.laneFollow = True
+                self.arucoId = []
                 self.numLaneDetect = 0
-
+                self.isArUcoDetect = False 
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
@@ -115,22 +117,23 @@ class autonomy(object):
                    #     print "detect aruco"
                    # else:
                    #     self.isArUcoDetect = False
-                    
+                    self.isArUcoDetect = False
+                    self.arucoId = []
 		    for m in data.transforms:
-		        id = m.fiducial_id
+		        self.arucoId.append(m.fiducial_id)
 		        trans = m.transform.translation
                         rot = m.transform.rotation
-                        print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
+                        #print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
                         self.trans_xz = [trans.x, trans.z]
                         self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
                         self.rotzLast2 = self.rotzLast1 
                         self.rotzLast1 = rot.z
                         
-                        print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
+                        #print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
                                 
-                        if id is 2:
+                        if self.arucoId:
                             self.isArUcoDetect = True
-                            print "detect aruco"
+                            print(self.arucoId)
                                 
 
 
@@ -296,6 +299,18 @@ class autonomy(object):
                 else:
                     return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
 
+        def CrossHill(self, isLaneDetect):
+            start = time.time()
+            while (time.time() - start) < 0.15:
+                print(time.time() - start)
+                self.leftSpeed = 0.4
+                self.rightSpeed = 0.4
+                self.publishMotors()
+            self.leftSpeed = 0
+            self.rightSpeed = 0
+            self.publishMotors()
+
+
         def runner(self):
                 angleDegLast1 = 0
                 angleDegLast2 = 0
@@ -303,7 +318,14 @@ class autonomy(object):
                 last_steering_angle = 0
                 sum_angle = 0
                 while not rospy.is_shutdown():
-                    if self.numLaneDetect != 0 and self.distance > 0.3:
+                    self.laneFollow = True 
+                    if self.isArUcoDetect:
+                        self.laneFollow = False # close lane followe function
+                        if 3 in self.arucoId:
+                            self.CrossHill(self.numLaneDetect)
+                            self.isArUcoDetect = False 
+
+                    if self.numLaneDetect != 0 and self.distance > 0.3 and self.laneFollow:
                         # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
@@ -360,14 +382,12 @@ class autonomy(object):
                         ## ************************************ 
                         
 	    	        self.publishMotors()                       
+#
+#                    else:
+#                        self.rightSpeed = 0
+#                        self.leftSpeed = 0
+#                        self.publishMotors()
 
-                    else:
-                        self.rightSpeed = 0
-                        self.leftSpeed = 0
-                        self.publishMotors()
-                    #self.rightSpeed = 0.2
-                    #self.leftSpeed = 0.2
-                    #self.publishMotors()
                     self.rate.sleep()
 
 
