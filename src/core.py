@@ -38,7 +38,8 @@ class autonomy(object):
                 self.arucoId = []
                 self.numLaneDetect = 0
                 self.isArUcoDetect = False 
-		#Setup Publishers
+                self.hillNum = 0
+                #Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
 	        self.blobpub = rospy.Publisher('imageProc',Image, queue_size=10)
@@ -110,19 +111,13 @@ class autonomy(object):
                 self.rotzLast1 = 0
                 self.rotzLast2 = 0
 		def fiducialNav(data):
-                    id = -1
-                    print "FiducialNav callback"
-                   # if data.transforms:
-                   #     self.isArUcoDetect = True
-                   #     print "detect aruco"
-                   # else:
-                   #     self.isArUcoDetect = False
+#                    print "FiducialNav callback"
                     self.isArUcoDetect = False
                     self.arucoId = []
 		    for m in data.transforms:
-		        self.arucoId.append(m.fiducial_id)
-		        trans = m.transform.translation
-                        rot = m.transform.rotation
+		        self.arucoId.append(m.fiducial_id) # record evry ArUco id appears
+		        trans = m.transform.translation # calculate position
+                        rot = m.transform.rotation # calculate rotation
                         #print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
                         self.trans_xz = [trans.x, trans.z]
                         self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
@@ -132,8 +127,8 @@ class autonomy(object):
                         #print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
                                 
                         if self.arucoId:
-                            self.isArUcoDetect = True
-                            print(self.arucoId)
+                            self.isArUcoDetect = True # set the flag to True
+                            #print(self.arucoId)
                                 
 
 
@@ -299,13 +294,15 @@ class autonomy(object):
                 else:
                     return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
 
+        
         def CrossHill(self, isLaneDetect):
-            start = time.time()
-            while (time.time() - start) < 0.15:
-                print(time.time() - start)
-                self.leftSpeed = 0.4
-                self.rightSpeed = 0.4
-                self.publishMotors()
+            if self.hillNum == 0: # avoid second time speed up
+                start = time.time()
+                while (time.time() - start) < 0.3: # speed up for 0.3 seconds to climb the hill
+                    self.leftSpeed = 0.6
+                    self.rightSpeed = 0.6
+                    self.publishMotors()
+                self.hillNum = self.hillNum + 1
             self.leftSpeed = 0
             self.rightSpeed = 0
             self.publishMotors()
@@ -319,12 +316,21 @@ class autonomy(object):
                 sum_angle = 0
                 while not rospy.is_shutdown():
                     self.laneFollow = True 
-                    if self.isArUcoDetect:
-                        self.laneFollow = False # close lane followe function
-                        if 3 in self.arucoId:
-                            self.CrossHill(self.numLaneDetect)
-                            self.isArUcoDetect = False 
+                    if self.isArUcoDetect: # check if any ArUco is detected
+                        start = time.time()
+                        while (time.time() - start) < 0.05: # stop for a while
+                            self.leftSpeed = 0
+                            self.rightSpeed = 0
+                            self.publishMotors()
+                        self.laneFollow = False # close lane folloer function
 
+                        # Hill Obstacle
+                        if 3 in self.arucoId: # check whether ArUco 3 is detected
+                            self.CrossHill(self.numLaneDetect) # call CrossHill function
+                            self.isArUcoDetect = False 
+                            self.arucoId = []
+
+                    # Lane follower & Pedestrians avoid
                     if self.numLaneDetect != 0 and self.distance > 0.3 and self.laneFollow:
                         # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
@@ -382,11 +388,10 @@ class autonomy(object):
                         ## ************************************ 
                         
 	    	        self.publishMotors()                       
-#
-#                    else:
-#                        self.rightSpeed = 0
-#                        self.leftSpeed = 0
-#                        self.publishMotors()
+                    else:
+                        self.rightSpeed = 0
+                        self.leftSpeed = 0
+                        self.publishMotors()
 
                     self.rate.sleep()
 
