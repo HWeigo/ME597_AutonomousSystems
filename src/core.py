@@ -39,6 +39,9 @@ class autonomy(object):
                 self.numLaneDetect = 0
                 self.isArUcoDetect = False 
                 self.hillNum = 0
+                self.isParking = 0
+
+
                 #Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
@@ -113,22 +116,29 @@ class autonomy(object):
 		def fiducialNav(data):
 #                    print "FiducialNav callback"
                     self.isArUcoDetect = False
-                    self.arucoId = []
+                    self.arucoId = [] # Store all the ids
+                    self.arucoX = [-1] * 9 # Store each Aruco id's x coordinate
 		    for m in data.transforms:
 		        self.arucoId.append(m.fiducial_id) # record evry ArUco id appears
 		        trans = m.transform.translation # calculate position
                         rot = m.transform.rotation # calculate rotation
-                        #print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (id, trans.x, trans.y, trans.z)
-                        self.trans_xz = [trans.x, trans.z]
-                        self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
-                        self.rotzLast2 = self.rotzLast1 
-                        self.rotzLast1 = rot.z
+                        self.arucoX[m.fiducial_id] = trans.x
+                        
+                        # 0<x<0.25: at the right side, -0.25<x<0: at the left side
+                        print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (m.fiducial_id, trans.x, trans.y, trans.z) 
+                       # self.trans_xz = [trans.x, trans.z]
+                       # self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
+                       # self.rotzLast2 = self.rotzLast1 
+                       # self.rotzLast1 = rot.z
                         
                         #print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
                                 
                         if self.arucoId:
                             self.isArUcoDetect = True # set the flag to True
-                            #print(self.arucoId)
+                        if m.fiducial_id in [0,1,2]:
+                            self.isParking = 1
+                        
+                    print(self.arucoId)
                                 
 
 
@@ -307,13 +317,45 @@ class autonomy(object):
             self.rightSpeed = 0
             self.publishMotors()
 
+#        def PIDController(self, kp, ki, kd, curr, target):
+#
+#            if abs(angleDegAvg) > 35:
+#                sum_angle = sum_angle + angleDegAvg * 0.01
+#            else:
+#                sum_angle = 0
+#            steering_speed = kp * angleDegAvg + ki * sum_angle + kd * (angleDeg - angleDegLast1)/0.01  
+#            if abs(steering_speed) > max_angle_deviation:
+#                steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
+#            
+#            return pidOutput
 
+        def LimitSpeed(self, speed_lower_bound, speed_upper_bound):
+
+            if self.leftSpeed > 0:
+                self.leftSpeed += speed_lower_bound 
+            if self.leftSpeed < 0:
+                self.leftSpeed -= speed_lower_bound 
+            if self.leftSpeed > speed_upper_bound:
+                self.leftSpeed = speed_upper_bound
+            if self.leftSpeed < -speed_upper_bound:
+                self.leftSpeed = -speed_upper_bound
+
+            if self.rightSpeed > 0:
+                self.rightSpeed += speed_lower_bound 
+            if self.rightSpeed < 0:
+                self.rightSpeed -= speed_lower_bound 
+            if self.rightSpeed > speed_upper_bound:
+                self.rightSpeed = speed_upper_bound 
+            if self.rightSpeed < -speed_upper_bound:
+                self.rightSpeed = -speed_upper_bound 
+                        
         def runner(self):
                 angleDegLast1 = 0
                 angleDegLast2 = 0
                 curr_steering_angle = 0
                 last_steering_angle = 0
                 sum_angle = 0
+
                 while not rospy.is_shutdown():
                     self.laneFollow = True 
                     if self.isArUcoDetect: # check if any ArUco is detected
@@ -329,8 +371,44 @@ class autonomy(object):
                             self.CrossHill(self.numLaneDetect) # call CrossHill function
                             self.isArUcoDetect = False 
                             self.arucoId = []
+                        
+                    # Parking
+                    if self.isParking:
+                        # check the distance to the wall
+                        if self.distance > 0.05:
+                            garagePosition = self.arucoX[:3]
+                            # if one of the ArUco is not detected, assumn it's at the edge position
+                            if garagePosition[0] is -1:
+                                garagePosition[0] = 0.25
+                            if garagePosition[1] is -1:
+                                garagePosition[1] = -0.25
 
-                    # Lane follower & Pedestrians avoid
+                            # check whether middle ArUco is detected
+                            if garagePosition[2] is not -1:
+                                target = garagePosition[2]
+                            else:
+                                target = (garagePosition[0] + garagePosition[1])/2
+                            
+                            # initial forward speed
+                            forward_speed = 0.07
+                            # if target > 0, turn right, else turn left
+                            kp_parking = 0.2
+                            steering_speed = kp_parking*target  
+                            if steering_speed > 0.04:
+                                steering_speed = 0.04
+                            self.leftSpeed = forward_speed + steering_speed
+                            self.rightSpeed = forward_speed - steering_speed 
+                            self.LimitSpeed(0.1, 0.22)
+                            self.publishMotors()
+
+                        else:
+                            # stop the car if distance to the wal is < 0.3m
+                            self.leftSpeed = 0
+                            self.rightSpeed = 0
+                            self.publishMotors()
+
+
+                        # Lane follower & Pedestrians avoid
                     if self.numLaneDetect != 0 and self.distance > 0.3 and self.laneFollow:
                         # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
