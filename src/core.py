@@ -431,7 +431,7 @@ class autonomy(object):
                         angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
-                        #print(angleDegAvg)
+                        print(angleDegAvg)
                         
                         # PID Controller
                         if self.numLaneDetect == 1:
@@ -443,7 +443,7 @@ class autonomy(object):
 
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.001
+                        ki = 0.0
                         kd = 0.04
                         ## ************************************
                         
@@ -458,27 +458,7 @@ class autonomy(object):
                         self.leftSpeed = forward_speed  + steering_speed 
                         self.rightSpeed = forward_speed - steering_speed 
                         # Minimum forward_speed for the car to start moving
-                        speed_upper_bound = 0.30
-                        speed_lower_bound = 0.07
-
-                        if self.leftSpeed > 0:
-                            self.leftSpeed += speed_lower_bound 
-                        if self.leftSpeed < 0:
-                            self.leftSpeed -= speed_lower_bound 
-                        if self.leftSpeed > speed_upper_bound:
-                            self.leftSpeed = speed_upper_bound
-                        if self.leftSpeed < -speed_upper_bound:
-                            self.leftSpeed = -speed_upper_bound
-
-                        if self.rightSpeed > 0:
-                            self.rightSpeed += speed_lower_bound 
-                        if self.rightSpeed < 0:
-                            self.rightSpeed -= speed_lower_bound 
-                        if self.rightSpeed > speed_upper_bound:
-                            self.rightSpeed = speed_upper_bound 
-                        if self.rightSpeed < -speed_upper_bound:
-                            self.rightSpeed = -speed_upper_bound 
-                        ## ************************************ 
+                        self.LimitSpeed(0.1,0.3)
                         
 	    	        self.publishMotors()                       
                     else:
