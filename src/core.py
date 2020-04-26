@@ -144,7 +144,7 @@ class autonomy(object):
 
 		#Subscribe to topics 
 		rospy.Subscriber('raspicam_node/image', Image, imageProcessing)
-		rospy.Subscriber('lines', lines, lineCallback)
+		#rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
                 rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
@@ -167,22 +167,16 @@ class autonomy(object):
         def detect_edges(self, frame):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                #cv2.imshow("hsv", hsv)
-
-                # Lab
-                #lower_yellow = np.array([20, 40, 55])
-                #upper_yellow = np.array([32, 255, 255])
-                
-                # Home Day Time
-               # lower_black = np.array([180*0.03, 255*0.25, 255*0.16])
-               #  upper_black = np.array([180*0.22, 255*0.75, 255*0.37])
  
                 # Home Night Time
-                lower_black = np.array([180*0.03, 255*0.0, 255*0.10])
-                upper_black = np.array([180*0.22, 255*0.5, 255*0.24])              
+                #lower_black = np.array([180*0.03, 255*0.0, 255*0.10])
+                #upper_black = np.array([180*0.22, 255*0.5, 255*0.24])              
+ 
+                # Home Night Time
+                lower_black = np.array([180*0.2, 255*0.0, 255*0.07])
+                upper_black = np.array([180*0.615, 255*1.0, 255*0.3])              
                 
                 mask = cv2.inRange(hsv, lower_black, upper_black)
-                #cv2.imshow("blue mask", mask)
                 # detect edges
                 edges = cv2.Canny(mask, 200, 400)
 
@@ -192,8 +186,8 @@ class autonomy(object):
                 height, width = edges.shape
                 mask = np.zeros_like(edges)
 
-                # only focus bottom half of the screen
-                polygon = np.array([[(0, height * 1 / 2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+                # only focus bottom 3/5 of the screen
+                polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
                 cropped_edges = cv2.bitwise_and(edges, mask)
@@ -215,10 +209,31 @@ class autonomy(object):
                 slope, intercept = line
                 y1 = height  # bottom of the frame
                 y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
-            
-                # bound the coordinates within the frame
-                x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
-                x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
+                
+                x1 = (y1 - intercept) / slope 
+                if x1 == float("inf"):
+                    x1 = int(2*width) 
+                elif x1 == float("-inf"):
+                    x1 = int(-width) 
+                else:
+                    x1 = max(-width, min(2 * width, int(x1)))
+
+                x2 = (y2 - intercept) / slope 
+                if x2 == float("inf"):
+                    x2 = int(2*width) 
+                elif x2 == float("-inf"):
+                    x2 = int(-width) 
+                else:
+                    x2 = max(-width, min(2 * width, int(x2)))
+
+                
+              #  print "%f %f" % (intercept, slope)
+              #  # bound the coordinates within the frame
+              #  x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
+              #  x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
+                
+                #print "x1 y1 x2 y2 %d %d %d %d " % (x1, y1, x2, y2)
+                
                 return [[x1, y1, x2, y2]]
 
 
@@ -244,7 +259,7 @@ class autonomy(object):
                 for line_segment in line_segments:
                     for x1, y1, x2, y2 in line_segment:
                         if x1 == x2:
-                            logging.info('skipping vertical line segment (slope=inf): %s' % line_segment)
+                            #logging.info('skipping vertical line segment (slope=inf): %s' % line_segment)
                             continue
                         fit = np.polyfit((x1, x2), (y1, y2), 1)
                         slope = fit[0]
@@ -264,7 +279,7 @@ class autonomy(object):
                 if len(right_fit) > 0:
                     lane_lines.append(self.make_points(frame, right_fit_average))
             
-                logging.debug('lane lines: %s' % lane_lines)  # [[[316, 720, 484, 432]], [[1009, 720, 718, 432]]]
+                #logging.debug('lane lines: %s' % lane_lines)  # [[[316, 720, 484, 432]], [[1009, 720, 718, 432]]]
             
                 return lane_lines
 
@@ -409,7 +424,7 @@ class autonomy(object):
 
 
                         # Lane follower & Pedestrians avoid
-                    if self.numLaneDetect != 0 and self.distance > 0.3 and self.laneFollow:
+                    if self.numLaneDetect != 0 and self.distance > 0.2 and self.laneFollow:
                         # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
