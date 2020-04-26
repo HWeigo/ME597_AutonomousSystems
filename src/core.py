@@ -420,8 +420,8 @@ class autonomy(object):
                         
                         # PID Controller
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.075
-                            max_angle_deviation = 0.08
+                            forward_speed = 0.08
+                            max_angle_deviation = 0.1
                         if self.numLaneDetect == 2:
                             forward_speed = 0.09
                             max_angle_deviation = 0.015
@@ -444,7 +444,7 @@ class autonomy(object):
                         self.rightSpeed = forward_speed - steering_speed 
                         # Minimum forward_speed for the car to start moving
                         speed_upper_bound = 0.30
-                        speed_lower_bound = 0.10
+                        speed_lower_bound = 0.07
 
                         if self.leftSpeed > 0:
                             self.leftSpeed += speed_lower_bound 
