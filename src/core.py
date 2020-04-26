@@ -39,6 +39,7 @@ class autonomy(object):
                 self.numLaneDetect = 0
                 self.isArUcoDetect = False 
                 self.hillNum = 0
+                self.reverseNum = 0
                 self.isParking = 0
                 self.isReverse = 0
 
@@ -139,9 +140,10 @@ class autonomy(object):
                         if m.fiducial_id in [0,1,2]:
                             self.isParking = 1
                         if m.fiducial_id is 6:
+                            #self.TurnAround()
                             self.isReverse = 1
                         
-                    print(self.arucoId)
+                    #print(self.arucoId)
                                 
 
 
@@ -341,11 +343,13 @@ class autonomy(object):
             self.publishMotors()
 
         def TurnAround(self):
-            start = time.time()
-            while (time.time() - start) < 0.7:
-                self.leftSpeed = -0.7
-                self.rightSpeed = 0.7
-                self.publishMotors()
+            if self.reverseNum == 0:
+                start = time.time()
+                while (time.time() - start) < 0.2:
+                    self.leftSpeed = -0.4
+                    self.rightSpeed = 0.4
+                    self.publishMotors()
+                self.reverseNum = 1
             self.leftSpeed = 0
             self.rightSpeed = 0
             self.publishMotors()
@@ -395,7 +399,7 @@ class autonomy(object):
 
                         if self.isReverse:
                             self.TurnAround()
-                            self.isReverse = 0
+                       #     self.isReverse = 0
                         
                     # Parking
                     if self.isParking:
@@ -446,15 +450,15 @@ class autonomy(object):
                         # PID Controller
                         if self.numLaneDetect == 1:
                             forward_speed = 0.08
-                            max_angle_deviation = 0.15
+                            max_angle_deviation = 0.10
                         if self.numLaneDetect == 2:
                             forward_speed = 0.12
                             max_angle_deviation = 0.02
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.02
-                        ki = 0.1
-                        kd = 0.04
+                        kp = 0.03
+                        ki = 0.05
+                        kd = 0.0
                         ## ************************************
                         
                         if abs(angleDegAvg) > 40:
