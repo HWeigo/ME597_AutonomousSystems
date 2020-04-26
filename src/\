@@ -27,12 +27,6 @@ class autonomy(object):
 		self.tilt = 0
 		self.bridge = CvBridge()
 
-                self.errorSum = 0
-                self.errorLast = 0
-                self.distanceLast1 = 0
-                self.distanceLast2 = 0
-
-
 		#Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
@@ -94,68 +88,66 @@ class autonomy(object):
 #		LEDmsg.b3 = 255
 #		rospy.loginfo(LEDmsg)
 #		self.LEDpub.publish(LEDmsg)
+        def forward(self, timeProcess):
+                start = time.time()
+                while (time.time() - start + timeProcess) < 1.2:
+                    if self.distance > 0.5:
+                        self.leftSpeed = 0.3
+                        self.rightSpeed = 0.3
+                    else:
+                        runtime = time.time() - start
+                        self.leftSpeed = 0
+                        self.rightSpeed = 0
+                        self.publishMotors()
+                        return runtime + timeProcess
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
+                return -1
+
         
-        def distanceMaintenance(self):
+        def turnRight(self):
+                start = time.time()
+                while (time.time() - start) < 0.53:
+                    self.leftSpeed = 0.7
+                    self.rightSpeed = -0.7
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
         
-			## Place code here
-                    speed  = 0
-                    errorCurr = 0
+        def turnLeft(self):
+                start = time.time()
+                while (time.time() - start) < 0.6:
+                    self.leftSpeed = -0.7
+                    self.rightSpeed = 0.7
+                    self.publishMotors()
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
+
+        def stop(self):
+                start = time.time()
+                while (time.time() - start) < 0.3:
+                    self.leftSpeed = 0
+                    self.rightSpeed = 0
+                    self.publishMotors()
                     
-                    ## ********** Config paremeter ******** 
-                    kp = 0.35
-                    ki = 0.6
-                    kd = 0.020
-                    targetUltr = 0.195
-                    ## ************************************
-                    
-                    ## ****** Distance average filter *****
-                    distanceCurr = self.distance
-                    distanceAver = (distanceCurr + self.distanceLast1 + self.distanceLast2)/3
-                    errorCurr = distanceAver - targetUltr
-                    self.distanceLast2 = self.distanceLast1
-                    self.distanceLast1 = distanceCurr
-                    # *************************************
-
-                    self.errorSum += errorCurr * 0.01
-
-                    integralBound = 0.3
-                    if self.errorSum > integralBound:
-                        self.errosrSum = integralBound
-                    if self.errorSum < (-1 * integralBound):
-                        self.errorSum = -1 * integralBound
-
-                    speed  = kp * errorCurr + ki * self.errorSum + kd * (errorCurr - self.errorLast) / 0.01 # Calculate PID output
-                                       
-                                        
-                    ## ******* Add speed setpoint *********
-                    # Minimum speed for the car to start moving
-                    if speed > 0:
-                        speed += 0.11
-                    if speed < 0:
-                        speed -= 0.155
-                    ## ************************************ 
-                    
-                    ## ******** Restrict output ***********
-                    #if speed > 0.3:
-                    #    speed  = 0.3
-                    #if speed < -0.3:
-                    #    speed = -0.3
-                    # *************************************
-                   
-                    ## *** Measure setpoint (for debug) ***
-                    #speed  = -0.13
-                    ## ************************************
-                    self.errorLast = errorCurr # Update errorLast
-
-                    return speed
-
-
 	def runner(self):
-		while not rospy.is_shutdown():
-                    self.leftSpeed = self.distanceMaintenance()
-                    self.rightSpeed = self.distanceMaintenance()
-
+                while not rospy.is_shutdown():
                     
+                    while 1:
+                        timeTotal = 0
+                        while 1:
+                            timeLeft = self.forward(timeTotal)
+                            if timeLeft is  -1:
+                                break
+                            else:
+                                timeTotal = timeLeft 
+                        self.stop()
+                        self.turnLeft()
+                        self.stop()
 
 			##Leave these lines at the end
 		    self.publishMotors()
