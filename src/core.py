@@ -178,8 +178,11 @@ class autonomy(object):
                 #upper_black = np.array([180*0.22, 255*0.5, 255*0.24])              
  
                 # Home Night Time
-                lower_black = np.array([180*0.1, 255*0.0, 255*0.07])
-                upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
+                #lower_black = np.array([180*0.1, 255*0.0, 255*0.07])
+                #upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
+                
+                lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
+                upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
                 
                 mask = cv2.inRange(hsv, lower_black, upper_black)
                 # detect edges
@@ -452,7 +455,7 @@ class autonomy(object):
                             forward_speed = 0.08
                             max_angle_deviation = 0.10
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.12
+                            forward_speed = 0.10
                             max_angle_deviation = 0.02
 
                         ## ********** Config paremeter ******** 
