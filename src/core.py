@@ -194,10 +194,14 @@ class autonomy(object):
                 height, width = edges.shape
                 mask = np.zeros_like(edges)
 
-                # only focus bottom 3/5 of the screen
-                polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+               # # only focus bottom 3/5 of the screen
+               # polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+
+               # cv2.fillPoly(mask, polygon, 255)
+                polygon = np.array([[(0, height * 1 /3), (width, height * 1 / 3), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
+
                 cropped_edges = cv2.bitwise_and(edges, mask)
                 return cropped_edges
 
@@ -216,7 +220,7 @@ class autonomy(object):
                 height, width, _ = frame.shape
                 slope, intercept = line
                 y1 = height  # bottom of the frame
-                y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
+                y2 = int(y1 * 1 / 3)  # make points from middle of the frame down
                
                 if slope is 0:
                     x1 = 0
@@ -334,9 +338,9 @@ class autonomy(object):
 
         
         def CrossHill(self, isLaneDetect):
-            if self.hillNum == 0: # avoid second time speed up
+            if self.hillNum == 0: # Avoid second time speed up
                 start = time.time()
-                while (time.time() - start) < 0.2: # speed up for 0.3 seconds to climb the hill
+                while (time.time() - start) < 0.2: # Speed up for 0.3 seconds to climb the hill
                     self.leftSpeed = 0.6
                     self.rightSpeed = 0.6
                     self.publishMotors()
@@ -348,7 +352,7 @@ class autonomy(object):
         def TurnAround(self):
             if self.reverseNum == 0:
                 start = time.time()
-                while (time.time() - start) < 0.2:
+                while (time.time() - start) < 0.3: # Turn 180 degrees around
                     self.leftSpeed = -0.4
                     self.rightSpeed = 0.4
                     self.publishMotors()
@@ -399,31 +403,32 @@ class autonomy(object):
                             self.CrossHill(self.numLaneDetect) # call CrossHill function
                             self.isArUcoDetect = False 
                             self.arucoId = []
-
+                        
+                        # U Turn 
                         if self.isReverse:
                             self.TurnAround()
-                       #     self.isReverse = 0
                         
                     # Parking
                     if self.isParking:
-                        # check the distance to the wall
+                        # Check the distance to the wall
                         if self.distance > 0.05:
                             garagePosition = self.arucoX[:3]
-                            # if one of the ArUco is not detected, assumn it's at the edge position
+                            # If one of the ArUco is not detected, assumn it's at the edge position
                             if garagePosition[0] is -1:
                                 garagePosition[0] = 0.25
                             if garagePosition[1] is -1:
                                 garagePosition[1] = -0.25
 
-                            # check whether middle ArUco is detected
+                            # If middle ArUco is detected, directlly head to marker 2
                             if garagePosition[2] is not -1:
                                 target = garagePosition[2]
                             else:
                                 target = (garagePosition[0] + garagePosition[1])/2
                             
-                            # initial forward speed
+                            # Initial forward speed
                             forward_speed = 0.07
-                            # if target > 0, turn right, else turn left
+                            # If target > 0, turn right, else turn left
+                            # P controller to control direction
                             kp_parking = 0.25
                             steering_speed = kp_parking*target  
                             if steering_speed > 0.05:
@@ -434,37 +439,37 @@ class autonomy(object):
                             self.publishMotors()
 
                         else:
-                            # stop the car if distance to the wal is < 0.3m
+                            # Stop the car if distance to the wal is < 0.3m
                             self.leftSpeed = 0
                             self.rightSpeed = 0
                             self.publishMotors()
 
 
-                        # Lane follower & Pedestrians avoid
+                    # Lane follower & Pedestrians avoid
                     if self.numLaneDetect != 0 and self.distance > 0.2 and self.laneFollow:
                         # Calculate Road Angle
                         angleRadian = np.arctan2(self.x_offset, self.y_offset) 
                         angleDeg = angleRadian * 180.0 / math.pi  # angle (in degrees) to center vertical line
-                        angleDegAvg = (angleDeg + angleDegLast1 + angleDegLast2) / 3 
+                        angleDegAvg = angleDeg*1/6 + angleDegLast1*2/6 + angleDegLast2*3/6 
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
                         print(angleDegAvg)
                         
                         # PID Controller
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.08
-                            max_angle_deviation = 0.10
+                            forward_speed = 0.13
+                            max_angle_deviation = 0.11
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.10
+                            forward_speed = 0.14
                             max_angle_deviation = 0.02
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.03
-                        ki = 0.05
+                        kp = 0.014
+                        ki = 0.000005
                         kd = 0.0
                         ## ************************************
                         
-                        if abs(angleDegAvg) > 40:
+                        if abs(angleDegAvg) > 70:
                             sum_angle = sum_angle + angleDegAvg * 0.01
                         else:
                             sum_angle = 0
@@ -479,8 +484,8 @@ class autonomy(object):
                         
 	    	        self.publishMotors()                       
                     else:
-                        self.rightSpeed = 0
-                        self.leftSpeed = 0
+                        self.rightSpeed = 0.14
+                        self.leftSpeed = 0.14
                         self.publishMotors()
 
                     self.rate.sleep()
