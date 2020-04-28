@@ -42,7 +42,7 @@ class autonomy(object):
                 self.reverseNum = 0
                 self.isParking = 0
                 self.isReverse = 0
-
+                self.timeDetectReverse = 0
 
                 #Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
@@ -387,9 +387,11 @@ class autonomy(object):
                 curr_steering_angle = 0
                 last_steering_angle = 0
                 sum_angle = 0
-
                 while not rospy.is_shutdown():
+                    currTime = time.time()
                     self.laneFollow = True 
+                    
+                    
                     if self.isArUcoDetect: # check if any ArUco is detected
                         start = time.time()
                         while (time.time() - start) < 0.05: # stop for a while
@@ -404,9 +406,18 @@ class autonomy(object):
                             self.isArUcoDetect = False 
                             self.arucoId = []
                         
-                        # U Turn 
-                        if self.isReverse:
-                            self.TurnAround()
+                    # U Turn 
+                    if self.isReverse:
+                  #      self.TurnAround()
+                        self.timeDetectReverse = currTime 
+                        while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.3:
+                            self.leftSpeed = -0.25
+                            self.rightSpeed = 0.25
+                            self.publishMotors()
+                        self.leftSpeed = 0
+                        self.rightSpeed = 0
+                        self.publishMotors()
+                        self.isReverse = 0
                         
                     # Parking
                     if self.isParking:
@@ -453,27 +464,28 @@ class autonomy(object):
                         angleDegAvg = angleDeg*1/6 + angleDegLast1*2/6 + angleDegLast2*3/6 
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
-                        print(angleDegAvg)
+                        #print(angleDegAvg)
                         
                         # PID Controller
                         if self.numLaneDetect == 1:
-                            forward_speed = 0.13
-                            max_angle_deviation = 0.11
+                            forward_speed = 0.12
+                            max_angle_deviation = 0.10
                         if self.numLaneDetect == 2:
-                            forward_speed = 0.14
+                            forward_speed = 0.13
                             max_angle_deviation = 0.02
 
                         ## ********** Config paremeter ******** 
-                        kp = 0.014
-                        ki = 0.000005
-                        kd = 0.0
+                        kp = 0.002
+                        ki = 0.006
+                        kd = 0.0005
                         ## ************************************
                         
-                        if abs(angleDegAvg) > 70:
+                        if abs(angleDegAvg) > 60:
                             sum_angle = sum_angle + angleDegAvg * 0.01
                         else:
                             sum_angle = 0
-                        steering_speed = kp * angleDegAvg + ki * sum_angle + kd * (angleDeg - angleDegLast1)/0.01  
+                        #print(sum_angle)
+                        steering_speed = kp * angleDegAvg + ki * sum_angle + kd * (angleDeg - angleDegLast1)
                         if abs(steering_speed) > max_angle_deviation:
                             steering_speed = max_angle_deviation * steering_speed / abs(steering_speed) 
                         
