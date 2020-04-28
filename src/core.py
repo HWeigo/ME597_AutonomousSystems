@@ -181,8 +181,12 @@ class autonomy(object):
                 #lower_black = np.array([180*0.1, 255*0.0, 255*0.07])
                 #upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
                 
+                # camera 5
+                #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
+                #upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
+                #camera 6 ,60fps
                 lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
-                upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
+                upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
                 
                 mask = cv2.inRange(hsv, lower_black, upper_black)
                 # detect edges
@@ -464,7 +468,7 @@ class autonomy(object):
                         angleDegAvg = angleDeg*1/6 + angleDegLast1*2/6 + angleDegLast2*3/6 
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
-                        #print(angleDegAvg)
+                        print(angleDegAvg)
                         
                         # PID Controller
                         if self.numLaneDetect == 1:
