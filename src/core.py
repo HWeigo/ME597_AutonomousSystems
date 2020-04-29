@@ -42,6 +42,7 @@ class autonomy(object):
                 self.reverseNum = 0
                 self.isParking = 0
                 self.isReverse = 0
+                self.isTunnel = 0
                 self.timeDetectReverse = 0
                 self.leftSlope = 0
                 self.rightSlope = 0
@@ -144,6 +145,8 @@ class autonomy(object):
                         if m.fiducial_id is 6:
                             #self.TurnAround()
                             self.isReverse = 1
+                        if m.fiducial_id is 4 or m.fiducial_id is 5:
+                            self.isTunnel = 1
                         
                     #print(self.arucoId)
                                 
@@ -156,7 +159,7 @@ class autonomy(object):
                 rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
 		rospy.init_node('core', anonymous=True)
-		self.rate = rospy.Rate(10)
+		self.rate = rospy.Rate(20)
 
         def reduce_resolution(self, frame, scale_percent):
                 #calculate the 50 percent of original dimensions
@@ -204,7 +207,7 @@ class autonomy(object):
                # polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                # cv2.fillPoly(mask, polygon, 255)
-                polygon = np.array([[(0, height * 2 /5), (width, height * 2 / 5), (width, height), (0, height), ]], np.int32)
+                polygon = np.array([[(0, height * 9 /20), (width, height * 9 / 20), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
 
@@ -226,7 +229,7 @@ class autonomy(object):
                 height, width, _ = frame.shape
                 slope, intercept = line
                 y1 = height  # bottom of the frame
-                y2 = int(y1 * 2 / 5)  # make points from middle of the frame down
+                y2 = int(y1 * 9 / 20)  # make points from middle of the frame down
                
                 if slope is 0:
                     x1 = 0
@@ -401,30 +404,30 @@ class autonomy(object):
                 curr_steering_angle = 0
                 last_steering_angle = 0
                 sum_angle = 0
-                hasStop = 0
+                hasStop = 10
                 while not rospy.is_shutdown():
                     currTime = time.time()
                     self.laneFollow = True 
                     
                     
-                    if self.isArUcoDetect: # check if any ArUco is detected
-                        start = time.time()
-                        while (time.time() - start) < 0.05: # stop for a while
-                            self.leftSpeed = 0
-                            self.rightSpeed = 0
-                            self.publishMotors()
-                        self.laneFollow = False # close lane folloer function
+                   # if self.isArUcoDetect: # check if any ArUco is detected
+                   #     start = time.time()
+                   #     while (time.time() - start) < 0.05: # stop for a while
+                   #         self.leftSpeed = 0
+                   #         self.rightSpeed = 0
+                   #         self.publishMotors()
+                   #     self.laneFollow = False # close lane folloer function
 
-                        # Hill Obstacle
-                        if 3 in self.arucoId: # check whether ArUco 3 is detected
-                            self.CrossHill(self.numLaneDetect) # call CrossHill function
-                            self.isArUcoDetect = False 
-                            self.arucoId = []
+                   #     # Hill Obstacle
+                   #     if 3 in self.arucoId: # check whether ArUco 3 is detected
+                   #         self.CrossHill(self.numLaneDetect) # call CrossHill function
+                   #         self.isArUcoDetect = False 
+                   #         self.arucoId = []
                         
                     # U Turn 
                     if self.isReverse:
-                  #      self.TurnAround()
                         self.timeDetectReverse = currTime 
+                        self.laneFollow = False 
                         while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.6:
                             self.leftSpeed = -0.3
                             self.rightSpeed = 0.25
@@ -469,7 +472,23 @@ class autonomy(object):
                             self.leftSpeed = 0
                             self.rightSpeed = 0
                             self.publishMotors()
+                   
 
+                    if self.isTunnel:
+                        self.laneFollow = False 
+                        #start =time.time()
+                        #while (tilt.time() - start) < 0.1 or self.distance > 0.3
+                            
+                        if self.distance < 0.3:
+                            self.leftSpeed = 0.25
+                            self.rightSpeed = -0.25
+                            self.publishMotors() 
+                            print(self.distance)
+                        else:
+                            self.leftSpeed = 0.18
+                            self.rightSpeed = 0.18 
+                            self.publishMotors()
+                       # print(self.numLaneDetect) 
 
                     # Lane follower & Pedestrians avoid
                     if self.numLaneDetect != 0 and self.distance > 0.2 and self.laneFollow:
@@ -483,29 +502,34 @@ class autonomy(object):
       
                         print "left: %f, right: %f" % (self.leftSlope, self.rightSlope)
                         # PID Controller
-                        
-                        if self.leftSlope > 70 or self.rightSlope > 70:
-                           # if (time.time() - hasStop) > 0.2:
-                           #     start =time.time()
-                           #     while (time.time() - start) < 0.05: # stop for a while
-                           #         self.leftSpeed = 0
-                           #         self.rightSpeed = 0
-                           #         self.publishMotors()
-                           #         hasStop = time.time()
-                            forward_speed = 0.0
-                            max_angle_deviation = 0.14
-                        elif self.numLaneDetect == 1: #0.12 0.09
-                            forward_speed = 0.13
-                            max_angle_deviation = 0.07
-                        elif self.numLaneDetect == 2:
-                            forward_speed = 0.13
-                            max_angle_deviation = 0.02
-
+ 
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.005
+                        ki = 0.002
                         kd = 0.001
-                        ## ************************************
+                        ## ************************************                      
+                        
+                        if self.numLaneDetect == 1:
+                            if self.leftSlope > 69 or self.rightSlope < -69:
+                                if hasStop > 4:
+                                    start =time.time()
+                                    while (time.time() - start) < 0.05: # stop for a while
+                                        self.leftSpeed = 0
+                                        self.rightSpeed = 0
+                                        self.publishMotors()
+                                hasStop = 0
+                                kp = 0.0023
+                                forward_speed = 0.0
+                                max_angle_deviation = 0.15
+                            else:
+                                forward_speed = 0.12
+                                max_angle_deviation = 0.08
+                                hasStop += 1
+                        elif self.numLaneDetect == 2:
+                            forward_speed = 0.12
+                            max_angle_deviation = 0.03
+
+
                         
                         if abs(angleDegAvg) > 60:
                             sum_angle = sum_angle + angleDegAvg * 0.01
@@ -521,10 +545,11 @@ class autonomy(object):
                         # Minimum forward_speed for the car to start moving
                         self.LimitSpeed(0.03,0.3)
                         
-	    	        self.publishMotors()                       
-                    else:
-                        self.rightSpeed = 0.14
-                        self.leftSpeed = 0.14
+	    	        self.publishMotors()
+
+                    elif self.distance < 0.2 and self.laneFollow:
+                        self.rightSpeed = 0.0
+                        self.leftSpeed = 0.0
                         self.publishMotors()
 
                     self.rate.sleep()
