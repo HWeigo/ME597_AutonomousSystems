@@ -42,6 +42,7 @@ class autonomy(object):
                 self.reverseNum = 0
                 self.isParking = 0
                 self.isReverse = 0
+                self.isHill = 0
                 self.isTunnel = 0
                 self.isRedLight = 0
                 self.timeDetectReverse = 0
@@ -199,7 +200,8 @@ class autonomy(object):
                             self.isReverse = 1
                         if m.fiducial_id is 4 or m.fiducial_id is 5:
                             self.isTunnel = 1
-                        
+                        if m.fiducial_id is 3:
+                            self.isHill = trans.z # store distance to marker 3
                     #print(self.arucoId)
                                 
 
@@ -420,17 +422,14 @@ class autonomy(object):
                     return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
 
         
-        def CrossHill(self, isLaneDetect):
-            if self.hillNum == 0: # Avoid second time speed up
-                start = time.time()
-                while (time.time() - start) < 0.2: # Speed up for 0.3 seconds to climb the hill
-                    self.leftSpeed = 0.5
-                    self.rightSpeed = 0.5
-                    self.publishMotors()
-                self.hillNum = self.hillNum + 1
-            self.leftSpeed = 0
-            self.rightSpeed = 0
-            self.publishMotors()
+        def CrossHill(self, speed, t):
+            start = time.time()
+            while (time.time() - start) < t: # Speed up for 0.3 seconds to climb the hill
+                self.leftSpeed = speed 
+                self.rightSpeed = speed 
+                self.publishMotors()
+                self.rate.sleep()
+
 
         def TurnAround(self):
             if self.reverseNum == 0:
@@ -439,6 +438,7 @@ class autonomy(object):
                     self.leftSpeed = -0.4
                     self.rightSpeed = 0.4
                     self.publishMotors()
+                    self.rate.sleep() 
                 self.reverseNum = 1
             self.leftSpeed = 0
             self.rightSpeed = 0
@@ -487,16 +487,27 @@ class autonomy(object):
                     self.laneFollow = True 
                     
                     
-                    if self.isArUcoDetect: # check if any ArUco is detected
-                        self.Stop(0.1) 
-                        self.laneFollow = False # close lane folloer function
+                   # if self.isArUcoDetect: # check if any ArUco is detected
+                   #     self.Stop(0.1) 
+                   #     self.laneFollow = False # close lane folloer function
 
-                        # Hill Obstacle
-                        if 3 in self.arucoId: # check whether ArUco 3 is detected
-                            self.CrossHill(self.numLaneDetect) # call CrossHill function
-                            self.isArUcoDetect = False 
-                            self.arucoId = []
-                        
+                   #     # Hill Obstacle
+                   #     if 3 in self.arucoId: # check whether ArUco 3 is detected
+                   #         self.CrossHill(self.numLaneDetect) # call CrossHill function
+                   #         self.isArUcoDetect = False 
+                   #         self.arucoId = []
+                    # Hill
+                    if self.isHill > 0 and self.isHill < 0.75:
+                        self.Stop(0.1)
+                        self.CrossHill(0.5, 1.5)
+                        self.Stop(0.05)
+                        while self.numLaneDetect is 0:
+                            self.leftSpeed = 0.4
+                            self.rightSpeed = 0.4
+                            self.publishMotors()
+                            self.rate.sleep
+                        self.isHill = 0
+
                     # U Turn 
                     if self.isReverse:
                         self.timeDetectReverse = currTime 
@@ -558,7 +569,7 @@ class autonomy(object):
                         while self.isTunnel:
                             
                             print(self.distance)
-                            if self.distance < 0.3:
+                            if self.distance < 0.35:
                                 self.leftSpeed = 0.23
                                 self.rightSpeed = -0.25
                                 print "turn "
@@ -608,7 +619,7 @@ class autonomy(object):
                         ## ********** Config paremeter ******** 
                         kp = 0.002
                         ki = 0.0022
-                        kd = 0.001
+                        kd = 0.0005
                         ## ************************************                      
                         
                         if self.numLaneDetect == 1:
@@ -624,11 +635,11 @@ class autonomy(object):
                                 forward_speed = 0.0
                                 max_angle_deviation = 0.16
                             else:
-                                forward_speed = 0.12
+                                forward_speed = 0.14
                                 max_angle_deviation = 0.08
                                 stopBeforeTurn += 1
                         elif self.numLaneDetect == 2:
-                            forward_speed = 0.12
+                            forward_speed = 0.14
                             max_angle_deviation = 0.03
 
 
