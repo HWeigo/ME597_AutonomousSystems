@@ -187,8 +187,13 @@ class autonomy(object):
                 #upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
                 
                 # camera 5
-                lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
-                upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
+                #lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
+                #upper_black = np.array([180*0.6, 255*0.75, 255*0.25])        
+               
+                # camera 5, 4.29 
+                lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
+                upper_black = np.array([180*0.55, 255*0.5, 255*0.24])        
+               
                 #camera 6 ,60fps
                 #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
                 #upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
