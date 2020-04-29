@@ -463,7 +463,16 @@ class autonomy(object):
                 self.rightSpeed = speed_upper_bound 
             if self.rightSpeed < -speed_upper_bound:
                 self.rightSpeed = -speed_upper_bound 
-                        
+
+
+        def Stop(self, t):
+            start = time.time()
+            while (time.time() - start) < t: # stop for a while
+                self.leftSpeed = 0
+                self.rightSpeed = 0
+                self.publishMotors()
+                self.rate.sleep()
+
         def runner(self):
                 angleDegLast1 = 0
                 angleDegLast2 = 0
@@ -479,11 +488,7 @@ class autonomy(object):
                     
                     
                     if self.isArUcoDetect: # check if any ArUco is detected
-                        start = time.time()
-                        while (time.time() - start) < 0.05: # stop for a while
-                            self.leftSpeed = 0
-                            self.rightSpeed = 0
-                            self.publishMotors()
+                        self.Stop(0.1) 
                         self.laneFollow = False # close lane folloer function
 
                         # Hill Obstacle
@@ -500,6 +505,7 @@ class autonomy(object):
                             self.leftSpeed = -0.3
                             self.rightSpeed = 0.25
                             self.publishMotors()
+                            self.rate.sleep()
                         self.leftSpeed = 0
                         self.rightSpeed = 0
                         self.publishMotors()
@@ -541,40 +547,44 @@ class autonomy(object):
                             self.rightSpeed = 0
                             self.publishMotors()
                    
-
+                    hasTurn = 0
                     if self.isTunnel:
                         self.laneFollow = False 
                         #start =time.time()
                         #while (tilt.time() - start) < 0.1 or self.distance > 0.3
                         if timeDetectTunnel is 0:
                             timeDetectTunnel = time.time()
-                            start = timeDetectTunnel 
-                            while (time.time() - start) < 1: # stop for a while
-                                self.leftSpeed = 0
-                                self.rightSpeed = 0
-                                self.publishMotors()                           
-                       # if self.numLaneDetect != 0: # If detect lane line, then follow the line
-                       #     self.laneFollow = True
-                       #     print "find lane"
-                           # if self.numLaneDetect is 2 and (time.time() - timeDetectTunnel) > 2:
-                           #     self.isTunnel= 0 # Finish tunnel 
-                        if self.distance < 0.3:
-                            self.leftSpeed = 0.22
-                            self.rightSpeed = -0.26
-                            self.publishMotors() 
+                            self.Stop(1)
+                        while self.isTunnel:
+                            
                             print(self.distance)
-                        else:
-                            self.leftSpeed = 0.17
-                            self.rightSpeed = 0.17
+                            if self.distance < 0.3:
+                                self.leftSpeed = 0.23
+                                self.rightSpeed = -0.25
+                                print "turn "
+                            else:
+                                self.leftSpeed = 0.17
+                                self.rightSpeed = 0.17
                             self.publishMotors()
-                       # if (time.time() - timeDetectTunnel) > 17 and self.leftSlope < 40 and self.rightSlope > -40:
-                       #     self.isTunnel = 0
-                       #     self.laneFollow = True
-                    
-                    #if self.leftSlope > 50 and self.right
-                    # print(self.numLaneDetect) 
+                            self.rate.sleep()
 
-                    # Lane follower & Pedestrians avoid
+                            if (time.time() - timeDetectTunnel) > 17 and self.leftSlope < 40 and self.rightSlope > -40:
+                                self.isTunnel = 0
+                                self.laneFollow = True
+                    
+                   # if self.leftSlope > 50 and self.rightSlope < -50 and isStopLane is 0:
+                   #     Stop(0.3)
+                   #     if self.leftSlope > 50 and self.right < -50:
+                   #         isStopLane = 1
+                   #         Stop(0.7)
+                   #         finishStopLane = 1
+
+                   # currTime = time.time()
+                   # if finishStop is 1:
+                   #     timeDetectStopLane = currTime 
+                   #     finishStop = 0
+                   # if isStopLane 
+                   # # Lane follower & Pedestrians avoid
 
                     if self.isRedLight:
                         self.laneFollow = False
