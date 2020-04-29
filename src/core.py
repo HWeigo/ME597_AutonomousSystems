@@ -43,6 +43,8 @@ class autonomy(object):
                 self.isParking = 0
                 self.isReverse = 0
                 self.timeDetectReverse = 0
+                self.leftSlope = 0
+                self.rightSlope = 0
 
                 #Setup Publishers
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
@@ -182,11 +184,11 @@ class autonomy(object):
                 #upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
                 
                 # camera 5
-                #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
-                #upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
-                #camera 6 ,60fps
                 lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
-                upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
+                upper_black = np.array([180*0.6, 255*0.75, 255*0.2])        
+                #camera 6 ,60fps
+                #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
+                #upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
                 
                 mask = cv2.inRange(hsv, lower_black, upper_black)
                 # detect edges
@@ -202,7 +204,7 @@ class autonomy(object):
                # polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                # cv2.fillPoly(mask, polygon, 255)
-                polygon = np.array([[(0, height * 1 /3), (width, height * 1 / 3), (width, height), (0, height), ]], np.int32)
+                polygon = np.array([[(0, height * 2 /5), (width, height * 2 / 5), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
 
@@ -224,7 +226,7 @@ class autonomy(object):
                 height, width, _ = frame.shape
                 slope, intercept = line
                 y1 = height  # bottom of the frame
-                y2 = int(y1 * 1 / 3)  # make points from middle of the frame down
+                y2 = int(y1 * 2 / 5)  # make points from middle of the frame down
                
                 if slope is 0:
                     x1 = 0
@@ -291,15 +293,23 @@ class autonomy(object):
                         else:
                             if x1 > right_region_boundary and x2 > right_region_boundary:
                                 right_fit.append((slope, intercept))
-            
+                
+                self.leftSlope = 0
                 left_fit_average = np.average(left_fit, axis=0)
                 if len(left_fit) > 0:
-                    lane_lines.append(self.make_points(frame, left_fit_average))
-            
+                    lane = self.make_points(frame, left_fit_average)
+                    lane_lines.append(lane)
+                    x1, y1, x2, y2 = lane[0]
+                    self.leftSlope =  np.arctan2((x2-x1), (height/2)) * 180.0 / math.pi 
+                
+                self.rightSlope = 0
                 right_fit_average = np.average(right_fit, axis=0)
                 if len(right_fit) > 0:
-                    lane_lines.append(self.make_points(frame, right_fit_average))
-            
+                    lane = self.make_points(frame, right_fit_average)
+                    lane_lines.append(lane)
+                    x1, y1, x2, y2 = lane[0]
+                    self.rightSlope = np.arctan2((x2-x1), (height/2)) * 180.0 / math.pi 
+
                 #logging.debug('lane lines: %s' % lane_lines)  # [[[316, 720, 484, 432]], [[1009, 720, 718, 432]]]
             
                 return lane_lines
@@ -391,6 +401,7 @@ class autonomy(object):
                 curr_steering_angle = 0
                 last_steering_angle = 0
                 sum_angle = 0
+                hasStop = 0
                 while not rospy.is_shutdown():
                     currTime = time.time()
                     self.laneFollow = True 
@@ -414,8 +425,8 @@ class autonomy(object):
                     if self.isReverse:
                   #      self.TurnAround()
                         self.timeDetectReverse = currTime 
-                        while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.3:
-                            self.leftSpeed = -0.25
+                        while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.6:
+                            self.leftSpeed = -0.3
                             self.rightSpeed = 0.25
                             self.publishMotors()
                         self.leftSpeed = 0
@@ -469,19 +480,31 @@ class autonomy(object):
                         angleDegLast2 = angleDegLast1 
                         angleDegLast1 = angleDeg 
                         print(angleDegAvg)
-                        
+      
+                        print "left: %f, right: %f" % (self.leftSlope, self.rightSlope)
                         # PID Controller
-                        if self.numLaneDetect == 1:
-                            forward_speed = 0.12
-                            max_angle_deviation = 0.10
-                        if self.numLaneDetect == 2:
+                        
+                        if self.leftSlope > 70 or self.rightSlope > 70:
+                           # if (time.time() - hasStop) > 0.2:
+                           #     start =time.time()
+                           #     while (time.time() - start) < 0.05: # stop for a while
+                           #         self.leftSpeed = 0
+                           #         self.rightSpeed = 0
+                           #         self.publishMotors()
+                           #         hasStop = time.time()
+                            forward_speed = 0.0
+                            max_angle_deviation = 0.14
+                        elif self.numLaneDetect == 1: #0.12 0.09
+                            forward_speed = 0.13
+                            max_angle_deviation = 0.07
+                        elif self.numLaneDetect == 2:
                             forward_speed = 0.13
                             max_angle_deviation = 0.02
 
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.006
-                        kd = 0.0005
+                        ki = 0.005
+                        kd = 0.001
                         ## ************************************
                         
                         if abs(angleDegAvg) > 60:
