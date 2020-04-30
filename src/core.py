@@ -45,6 +45,8 @@ class autonomy(object):
                 self.isHill = 0
                 self.isTunnel = 0
                 self.isRedLight = 0
+                self.isIntersectionLeft = 0
+                self.isIntersectionRight = 0
                 self.timeDetectReverse = 0
                 self.leftSlope = 0
                 self.rightSlope = 0
@@ -146,22 +148,22 @@ class autonomy(object):
                             self.isRedLight = 1
                         else:
                             self.isRedLight = 0
-                       # # Display lines
-                       # green =(0, 255, 0)
-                       # red = (0, 0, 255)
-                       # line_width=2
-                       # line_image = np.zeros_like(frame)
-                       # if lane_lines is not None:
-                       #     for line in lane_lines:
-                       #         for x1, y1, x2, y2 in line:
-                       #             cv2.line(line_image, (x1, y1), (x2, y2), green, line_width)
-                       #     cv2.line(line_image, (width/2, height), (width/2 + x_offset, height/2), red, line_width)
+                        # Display lines
+                        green =(0, 255, 0)
+                        red = (0, 0, 255)
+                        line_width=2
+                        line_image = np.zeros_like(frame)
+                        if lane_lines is not None:
+                            for line in lane_lines:
+                                for x1, y1, x2, y2 in line:
+                                    cv2.line(line_image, (x1, y1), (x2, y2), green, line_width)
+                            cv2.line(line_image, (width/2, height), (width/2 + x_offset, height/2), red, line_width)
 
-                       # line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
+                        line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
 
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
-                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
+                        self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(mask,"mono8"))
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(mask, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
                         
@@ -202,6 +204,11 @@ class autonomy(object):
                             self.isTunnel = 1
                         if m.fiducial_id is 3:
                             self.isHill = trans.z # store distance to marker 3
+
+                        if m.fiducial_id is 7:
+                            self.isIntersectionRight = 1
+                        if m.fiducial_id is 8:
+                            self.isIntersectionleft = 1
                     #print(self.arucoId)
                                 
 
@@ -472,6 +479,14 @@ class autonomy(object):
                 self.rightSpeed = 0
                 self.publishMotors()
                 self.rate.sleep()
+        
+        def DriveMotors(self, left_speed, right_speed, t):
+            start = time.time()
+            while (time.time() - start) < t: # stop for a while
+                self.leftSpeed = left_speed 
+                self.rightSpeed = right_speed 
+                self.publishMotors()
+                self.rate.sleep()
 
         def runner(self):
                 angleDegLast1 = 0
@@ -499,13 +514,14 @@ class autonomy(object):
                     # Hill
                     if self.isHill > 0 and self.isHill < 0.75:
                         self.Stop(0.1)
-                        self.CrossHill(0.5, 1.5)
-                        self.Stop(0.05)
+                        self.CrossHill(0.5, 1.1)
+                        self.Stop(0.1)
                         while self.numLaneDetect is 0:
-                            self.leftSpeed = 0.4
-                            self.rightSpeed = 0.4
+                            self.leftSpeed = 0.24
+                            self.rightSpeed = 0.24
                             self.publishMotors()
                             self.rate.sleep
+                        self.Stop(0.1)
                         self.isHill = 0
 
                     # U Turn 
@@ -583,12 +599,19 @@ class autonomy(object):
                                 self.isTunnel = 0
                                 self.laneFollow = True
                     
-                   # if self.leftSlope > 50 and self.rightSlope < -50 and isStopLane is 0:
-                   #     Stop(0.3)
-                   #     if self.leftSlope > 50 and self.right < -50:
-                   #         isStopLane = 1
-                   #         Stop(0.7)
-                   #         finishStopLane = 1
+                   # if self.leftSlope > 50 and self.rightSlope < -50:
+                   #     self.Stop(0.3)
+                   #     if self.leftSlope > 50 and self.rightSlope < -50:
+                    if self.isIntersectionLeft or self.isIntersectionRight:
+                        self.Stop(0.7)
+                        self.DriveMotors(0.21,0.21,0.2)
+                        self.Stop(0.1)
+                        if self.isIntersectionLeft:
+                            self.DriveMotors(0.3, -0.25, 0.6)
+                        if self.isIntersectionRight:
+                            self.DriveMotors(-0.25, 0.3, 0.6)
+                        self.isIntersectionRight = 0
+                        self.isIntersectionLeft = 0
 
                    # currTime = time.time()
                    # if finishStop is 1:
@@ -618,33 +641,34 @@ class autonomy(object):
  
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.0022
+                        ki = 0.0015
                         kd = 0.0005
                         ## ************************************                      
                         
                         if self.numLaneDetect == 1:
                             if self.leftSlope > 69 or self.rightSlope < -69:
-                                if stopBeforeTurn > 4:
+                                if stopBeforeTurn > 3:
                                     start =time.time()
-                                    while (time.time() - start) < 0.05: # stop for a while
+                                    while (time.time() - start) < 0.1: # stop for a while
                                         self.leftSpeed = 0
                                         self.rightSpeed = 0
                                         self.publishMotors()
+                                        self.rate.sleep()
                                 stopBeforeTurn = 0
-                                kp = 0.002
+                                kp = 0.0021
                                 forward_speed = 0.0
-                                max_angle_deviation = 0.16
+                                max_angle_deviation = 0.20
                             else:
-                                forward_speed = 0.14
+                                forward_speed = 0.13
                                 max_angle_deviation = 0.08
                                 stopBeforeTurn += 1
                         elif self.numLaneDetect == 2:
-                            forward_speed = 0.14
+                            forward_speed = 0.13
                             max_angle_deviation = 0.03
 
 
                         
-                        if abs(angleDegAvg) > 67:
+                        if abs(angleDegAvg) > 60:
                             sum_angle = sum_angle + angleDegAvg * 0.01
                         else:
                             sum_angle = 0
