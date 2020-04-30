@@ -641,12 +641,12 @@ class autonomy(object):
  
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.0015
+                        ki = 0.0017
                         kd = 0.0005
                         ## ************************************                      
                         
                         if self.numLaneDetect == 1:
-                            if self.leftSlope > 69 or self.rightSlope < -69:
+                            if self.leftSlope > 45 or self.rightSlope < -45:
                                 if stopBeforeTurn > 3:
                                     start =time.time()
                                     while (time.time() - start) < 0.1: # stop for a while
@@ -655,20 +655,20 @@ class autonomy(object):
                                         self.publishMotors()
                                         self.rate.sleep()
                                 stopBeforeTurn = 0
-                                kp = 0.0021
-                                forward_speed = 0.0
+                                kp = 0.0027
+                                forward_speed = -0.025
                                 max_angle_deviation = 0.20
                             else:
-                                forward_speed = 0.13
-                                max_angle_deviation = 0.08
+                                forward_speed = 0.12
+                                max_angle_deviation = 0.05
                                 stopBeforeTurn += 1
                         elif self.numLaneDetect == 2:
-                            forward_speed = 0.13
+                            forward_speed = 0.11
                             max_angle_deviation = 0.03
 
 
                         
-                        if abs(angleDegAvg) > 60:
+                        if abs(angleDegAvg) > 55:
                             sum_angle = sum_angle + angleDegAvg * 0.01
                         else:
                             sum_angle = 0
@@ -687,6 +687,10 @@ class autonomy(object):
                     elif self.distance < 0.2 and self.laneFollow:
                         self.rightSpeed = 0.0
                         self.leftSpeed = 0.0
+                        self.publishMotors()
+                    elif self.laneFollow:
+                        self.rightSpeed = 0.15
+                        self.leftSpeed = 0.15
                         self.publishMotors()
 
                     self.rate.sleep()
