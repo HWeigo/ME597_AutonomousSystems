@@ -199,7 +199,7 @@ class autonomy(object):
                             self.isParking = 1
                         if m.fiducial_id is 6:
                             #self.TurnAround()
-                            self.isReverse = 1
+                            self.isReverse = trans.z 
                         if m.fiducial_id is 4 or m.fiducial_id is 5:
                             self.isTunnel = 1
                         if m.fiducial_id is 3:
@@ -208,7 +208,7 @@ class autonomy(object):
                         if m.fiducial_id is 7:
                             self.isIntersectionRight = 1
                         if m.fiducial_id is 8:
-                            self.isIntersectionleft = 1
+                            self.isIntersectionLeft = 1
                     #print(self.arucoId)
                                 
 
@@ -525,18 +525,28 @@ class autonomy(object):
                         self.isHill = 0
 
                     # U Turn 
-                    if self.isReverse:
-                        self.timeDetectReverse = currTime 
-                        self.laneFollow = False 
-                        while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.6:
-                            self.leftSpeed = -0.3
-                            self.rightSpeed = 0.25
+                    if self.isReverse and self.isReverse < 0.5:
+                        self.Stop(0.2)
+                        self.DriveMotors(0.3,-0.3,2.2)
+                        self.Stop(0.2)
+                        while self.leftSlope > 45 or self.rightSlope < -4.5:
+                            self.leftSpeed = 0.24
+                            self.rightSpeed = -0.24
                             self.publishMotors()
-                            self.rate.sleep()
-                        self.leftSpeed = 0
-                        self.rightSpeed = 0
-                        self.publishMotors()
+                            self.rate.sleep
+
                         self.isReverse = 0
+                       # self.timeDetectReverse = currTime 
+                       # self.laneFollow = False 
+                       # while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.6:
+                       #     self.leftSpeed = -0.3
+                       #     self.rightSpeed = 0.25
+                       #     self.publishMotors()
+                       #     self.rate.sleep()
+                       # self.leftSpeed = 0
+                       # self.rightSpeed = 0
+                       # self.publishMotors()
+                       # self.isReverse = 0
                         
                     # Parking
                     if self.isParking:
@@ -603,13 +613,13 @@ class autonomy(object):
                    #     self.Stop(0.3)
                    #     if self.leftSlope > 50 and self.rightSlope < -50:
                     if self.isIntersectionLeft or self.isIntersectionRight:
-                        self.Stop(0.7)
-                        self.DriveMotors(0.21,0.21,0.2)
+                        self.Stop(1.2)
+                        self.DriveMotors(0.2,0.2,0.9)
                         self.Stop(0.1)
                         if self.isIntersectionLeft:
-                            self.DriveMotors(0.3, -0.25, 0.6)
+                            self.DriveMotors(0.3, -0.3, 1.1)
                         if self.isIntersectionRight:
-                            self.DriveMotors(-0.25, 0.3, 0.6)
+                            self.DriveMotors(-0.3, 0.3, 1.1)
                         self.isIntersectionRight = 0
                         self.isIntersectionLeft = 0
 
