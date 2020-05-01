@@ -222,15 +222,6 @@ class autonomy(object):
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(20)
         
-        def detect_redLight(self, frame):
-                # filter for blue lane lines
-                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                # camera 5, 4.29 
-                lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
-                upper_black = np.array([180*0.55, 255*0.5, 255*0.238])        
-                
-                mask = cv2.inRange(hsv, lower_black, upper_black)
-
         def reduce_resolution(self, frame, scale_percent):
                 #calculate the 50 percent of original dimensions
                 width = int(frame.shape[1] * scale_percent / 100)
@@ -263,7 +254,11 @@ class autonomy(object):
                 # camera 5, 4.29 
                 lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
                 upper_black = np.array([180*0.55, 255*0.5, 255*0.238])        
-               
+                
+                # camera 5, 5.1
+               # lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
+               # upper_black = np.array([180*0.67, 255*0.5, 255*0.19])        
+                
                 #camera 6 ,60fps
                 #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
                 #upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
@@ -282,7 +277,7 @@ class autonomy(object):
                # polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                # cv2.fillPoly(mask, polygon, 255)
-                polygon = np.array([[(0, height * 9 /20), (width, height * 9 / 20), (width, height), (0, height), ]], np.int32)
+                polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
 
@@ -304,7 +299,7 @@ class autonomy(object):
                 height, width, _ = frame.shape
                 slope, intercept = line
                 y1 = height  # bottom of the frame
-                y2 = int(y1 * 9 / 20)  # make points from middle of the frame down
+                y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
                
                 if slope is 0:
                     x1 = 0
@@ -516,24 +511,24 @@ class autonomy(object):
                         self.Stop(0.1)
                         self.CrossHill(0.5, 1.1)
                         self.Stop(0.1)
-                        while self.numLaneDetect is 0:
-                            self.leftSpeed = 0.24
-                            self.rightSpeed = 0.24
-                            self.publishMotors()
-                            self.rate.sleep
+                       # while self.numLaneDetect is 0:
+                       #     self.leftSpeed = 0.22
+                       #     self.rightSpeed = 0.24
+                       #     self.publishMotors()
+                       #     self.rate.sleep
                         self.Stop(0.1)
                         self.isHill = 0
 
                     # U Turn 
                     if self.isReverse and self.isReverse < 0.5:
                         self.Stop(0.2)
-                        self.DriveMotors(0.3,-0.3,2.2)
+                        self.DriveMotors(0.35,-0.35,1.3)
                         self.Stop(0.2)
-                        while self.leftSlope > 45 or self.rightSlope < -4.5:
-                            self.leftSpeed = 0.24
-                            self.rightSpeed = -0.24
-                            self.publishMotors()
-                            self.rate.sleep
+                       # while self.leftSlope > 45 or self.rightSlope < -4.5:
+                       #     self.leftSpeed = 0.24
+                       #     self.rightSpeed = -0.24
+                       #     self.publishMotors()
+                       #     self.rate.sleep
 
                         self.isReverse = 0
                        # self.timeDetectReverse = currTime 
@@ -593,33 +588,34 @@ class autonomy(object):
                        #     timeDetectTunnel = time.time()
                        #     self.Stop(1)
                         self.DriveMotors(0.2,0.2,4)
-                        distance2Wall = 0.45
+                        distance2Wall = 0.5
                         startTurnning = 0
                         while self.isTunnel:
                             if self.distance < distance2Wall:
                                 #self.leftSpeed = 0.23
                                 #self.rightSpeed = -0.25
                                 #print "turn "
-                                self.DriveMotors(0.24, -0.3, 0.2)
+                                self.DriveMotors(0.2, -0.35, 0.21)
                                 startTurnning += 1
                             else:
                                 #self.leftSpeed = 0.17
                                 #self.rightSpeed = 0.17
-                                self.DriveMotors(0.2,0.2,0.25) 
+                                self.DriveMotors(0.2,0.2,0.28) 
                             #self.publishMotors()
                             
                             self.Stop(0.05)
                             if startTurnning > 2:
-                                distance2Wall = 0.2
+                                distance2Wall = 0.4
                                 if self.distance > 0.5:
                                     self.isTunnel = 0
-                        self.DriveMotors(0.2,0.2,1.8)
+                        self.DriveMotors(0.2,0.2,2.5)
                    
                    
                    # if self.leftSlope > 50 and self.rightSlope < -50:
                    #     self.Stop(0.3)
                    #     if self.leftSlope > 50 and self.rightSlope < -50:
                     if self.isIntersectionLeft or self.isIntersectionRight:
+                        self.DriveMotors(0.2,0.2,0.6)
                         self.Stop(1.2)
                         self.DriveMotors(0.2,0.2,0.9)
                         self.Stop(0.1)
@@ -658,8 +654,8 @@ class autonomy(object):
  
                         ## ********** Config paremeter ******** 
                         kp = 0.002
-                        ki = 0.0017
-                        kd = 0.0005
+                        ki = 0.002
+                        kd = 0.00
                         ## ************************************                      
                         
                         if self.numLaneDetect == 1:
@@ -672,21 +668,22 @@ class autonomy(object):
                                         self.publishMotors()
                                         self.rate.sleep()
                                 stopBeforeTurn = 0
-                                kp = 0.0027
+                                kp = 0.0022
                                 forward_speed = -0.025
-                                max_angle_deviation = 0.20
+                                max_angle_deviation = 0.26
                             else:
                                 forward_speed = 0.12
                                 max_angle_deviation = 0.05
                                 stopBeforeTurn += 1
                         elif self.numLaneDetect == 2:
-                            forward_speed = 0.11
+                            forward_speed = 0.12
                             max_angle_deviation = 0.03
 
 
                         
                         if abs(angleDegAvg) > 55:
                             sum_angle = sum_angle + angleDegAvg * 0.01
+                            sum_angle = min(sum_angle, 25)
                         else:
                             sum_angle = 0
                         #print(sum_angle)
@@ -697,11 +694,11 @@ class autonomy(object):
                         self.leftSpeed = forward_speed  + steering_speed 
                         self.rightSpeed = forward_speed - steering_speed 
                         # Minimum forward_speed for the car to start moving
-                        self.LimitSpeed(0.03,0.3)
+                        self.LimitSpeed(0.03,0.31)
                         
 	    	        self.publishMotors()
 
-                    elif self.distance < 0.2 and self.laneFollow:
+                    elif self.distance < 0.35 and self.laneFollow:
                         self.rightSpeed = 0.0
                         self.leftSpeed = 0.0
                         self.publishMotors()
