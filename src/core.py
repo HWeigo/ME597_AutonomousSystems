@@ -586,29 +586,36 @@ class autonomy(object):
                    
                     hasTurn = 0
                     if self.isTunnel:
-                        self.laneFollow = False 
+                        #self.laneFollow = False 
                         #start =time.time()
                         #while (tilt.time() - start) < 0.1 or self.distance > 0.3
-                        if timeDetectTunnel is 0:
-                            timeDetectTunnel = time.time()
-                            self.Stop(1)
+                       # if timeDetectTunnel is 0:
+                       #     timeDetectTunnel = time.time()
+                       #     self.Stop(1)
+                        self.DriveMotors(0.2,0.2,4)
+                        distance2Wall = 0.45
+                        startTurnning = 0
                         while self.isTunnel:
-                            
-                            print(self.distance)
-                            if self.distance < 0.35:
-                                self.leftSpeed = 0.23
-                                self.rightSpeed = -0.25
-                                print "turn "
+                            if self.distance < distance2Wall:
+                                #self.leftSpeed = 0.23
+                                #self.rightSpeed = -0.25
+                                #print "turn "
+                                self.DriveMotors(0.24, -0.3, 0.2)
+                                startTurnning += 1
                             else:
-                                self.leftSpeed = 0.17
-                                self.rightSpeed = 0.17
-                            self.publishMotors()
-                            self.rate.sleep()
-
-                            if (time.time() - timeDetectTunnel) > 17 and self.leftSlope < 40 and self.rightSlope > -40:
-                                self.isTunnel = 0
-                                self.laneFollow = True
-                    
+                                #self.leftSpeed = 0.17
+                                #self.rightSpeed = 0.17
+                                self.DriveMotors(0.2,0.2,0.25) 
+                            #self.publishMotors()
+                            
+                            self.Stop(0.05)
+                            if startTurnning > 2:
+                                distance2Wall = 0.2
+                                if self.distance > 0.5:
+                                    self.isTunnel = 0
+                        self.DriveMotors(0.2,0.2,1.8)
+                   
+                   
                    # if self.leftSlope > 50 and self.rightSlope < -50:
                    #     self.Stop(0.3)
                    #     if self.leftSlope > 50 and self.rightSlope < -50:
