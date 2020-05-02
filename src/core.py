@@ -55,7 +55,6 @@ class autonomy(object):
 		self.motorPub = rospy.Publisher('motors', motors, queue_size=10)
 		self.servoPub = rospy.Publisher('servos', servos, queue_size=10)
 	        self.blobpub = rospy.Publisher('imageProc',Image, queue_size=10)
-                #self.LEDpub = rospy.Publisher('leds', leds, queue_size=10)
 
 
 		#Create Subscriber callbacks
@@ -75,8 +74,8 @@ class autonomy(object):
 			except CvBridgeError as e:
 				print(e)
 
-                        #print "Processing image."
-                        # Lane Detection
+                        
+                        ############# Lane Detection ################
                         frame = self.reduce_resolution(frame, 18)        
                         edges = self.detect_edges(frame)
                         cropped_edges = self.region_of_interest(edges)
@@ -101,53 +100,45 @@ class autonomy(object):
                             x1, _, x2, _ = lane_lines[0][0]
                             x_offset = x2 - x1
 
-                        # Red light detection
+                        ##### Red Light Detection (Blob Detect) ####
                         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                         lower_red = np.array([180*0.04, 255*0.0, 255*0.0])
                         upper_red = np.array([180*0.95, 255*1.0, 255*1.0])        
-                
+                        
+                        # Mask other color except RED
                         mask = cv2.inRange(hsv, lower_red, upper_red)
                         # Setup SimpleBlobDetector parameters.
                         params = cv2.SimpleBlobDetector_Params()
-
                         # Change thresholds
                         params.minThreshold = 10
                         params.maxThreshold = 200
-
-
                         # Filter by Area.
                         params.filterByArea = True
                         params.minArea = 250
-
                         # Filter by Circularity
                         params.filterByCircularity = True
                         params.minCircularity = 0.1
                         params.maxCircularity = 0.9
-
                         # Filter by Convexity
                         params.filterByConvexity = True
                         params.minConvexity = 0.2
-                            
                         # Filter by Inertia
                         params.filterByInertia = True
                         params.minInertiaRatio = 0.01
-
                         # Create a detector with the parameters
                         ver = (cv2.__version__).split('.')
                         if int(ver[0]) < 3 :
                             detector = cv2.SimpleBlobDetector(params)
                         else : 
                             detector = cv2.SimpleBlobDetector_create(params)
-                        # Set up the detector with default parameters.
-                        # detector = cv2.SimpleBlobDetector()
-                          
                         # Detect blobs.
                         keypoints = detector.detect(mask)
-
+                        # Check whether there is red light in front
                         if keypoints:
                             self.isRedLight = 1
                         else:
                             self.isRedLight = 0
+                        
                         # Display lines
                         green =(0, 255, 0)
                         red = (0, 0, 255)
@@ -161,10 +152,11 @@ class autonomy(object):
 
                         line_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
 
-
+                        # Display mask image
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cropped_edges,"mono8"))
+                        # Display lane detection result
                         self.blobpub.publish(self.bridge.cv2_to_imgmsg(line_image,"bgr8"))
-                        #self.blobpub.publish(self.bridge.cv2_to_imgmsg(mask,"mono8"))
+                        # Display blob detection result 
                         #self.blobpub.publish(self.bridge.cv2_to_imgmsg(cv2.drawKeypoints(mask, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS),"bgr8"))
                         
                         self.x_offset = x_offset 
@@ -186,51 +178,47 @@ class autonomy(object):
                         
                         # 0<x<0.25: at the right side, -0.25<x<0: at the left side
                         print "Fid trans x, y, z:  %d, %lf, %lf, %lf" % (m.fiducial_id, trans.x, trans.y, trans.z) 
-                       # self.trans_xz = [trans.x, trans.z]
-                       # self.rot_z = (rot.z + self.rotzLast1 + self.rotzLast2)/3
-                       # self.rotzLast2 = self.rotzLast1 
-                       # self.rotzLast1 = rot.z
-                        
-                        #print "Fid trans x, y, z, w:  %lf, %lf, %lf, %lf \n\n" % (rot.x, rot.y, self.rot_z, rot.w)
-                                
+   
                         if self.arucoId:
-                            self.isArUcoDetect = True # set the flag to True
+                            self.isArUcoDetect = True 
+                        # Check for garage obstacle
                         if m.fiducial_id in [0,1,2]:
                             self.isParking = 1
+                        # Check for U turn obstacle
                         if m.fiducial_id is 6:
-                            #self.TurnAround()
-                            self.isReverse = trans.z 
+                            # Store the distance
+                            self.isReverse = trans.z
+                        # Check for tunnel obstacle
                         if m.fiducial_id is 4 or m.fiducial_id is 5:
                             self.isTunnel = 1
+                        # Check for hill obstacle
                         if m.fiducial_id is 3:
                             self.isHill = trans.z # store distance to marker 3
-
+                        # Nevigate at intersection
                         if m.fiducial_id is 7:
                             self.isIntersectionRight = 1
                         if m.fiducial_id is 8:
                             self.isIntersectionLeft = 1
-                    #print(self.arucoId)
-                                
 
 
 		#Subscribe to topics 
 		rospy.Subscriber('raspicam_node/image', Image, imageProcessing)
-		#rospy.Subscriber('lines', lines, lineCallback)
 		rospy.Subscriber('distance', distance, distanceCallback)
                 rospy.Subscriber("fiducial_transforms", FiducialTransformArray, fiducialNav)
 
 		rospy.init_node('core', anonymous=True)
 		self.rate = rospy.Rate(20)
         
+
+        # Reduce resolution to decrease processing time
         def reduce_resolution(self, frame, scale_percent):
-                #calculate the 50 percent of original dimensions
+                # Calculate the scale_percent percent of original dimensions
                 width = int(frame.shape[1] * scale_percent / 100)
                 height = int(frame.shape[0] * scale_percent / 100)
 
-                # dsize
                 dsize = (width, height)
 
-                # resize image
+                # Resize image
                 frame = cv2.resize(frame, dsize)
                 
                 return frame 
@@ -239,32 +227,16 @@ class autonomy(object):
                 # filter for blue lane lines
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
  
-                # Home Night Time
-                #lower_black = np.array([180*0.03, 255*0.0, 255*0.10])
-                #upper_black = np.array([180*0.22, 255*0.5, 255*0.24])              
- 
-                # Home Night Time
-                #lower_black = np.array([180*0.1, 255*0.0, 255*0.07])
-                #upper_black = np.array([180*0.5, 255*0.45, 255*0.3])              
-                
-                # camera 5
-                #lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
-                #upper_black = np.array([180*0.6, 255*0.75, 255*0.25])        
-               
-                # camera 5, 4.29 
+                # camera 5, 40fps 
                 lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
                 upper_black = np.array([180*0.55, 255*0.5, 255*0.238])        
-                
-                # camera 5, 5.1
-               # lower_black = np.array([180*0.05, 255*0.0, 255*0.0])
-               # upper_black = np.array([180*0.67, 255*0.5, 255*0.19])        
                 
                 #camera 6 ,60fps
                 #lower_black = np.array([180*0.05, 255*0.0, 255*0.02])
                 #upper_black = np.array([180*0.55, 255*0.5, 255*0.13])        
                 
                 mask = cv2.inRange(hsv, lower_black, upper_black)
-                # detect edges
+                # Detect edges
                 edges = cv2.Canny(mask, 200, 400)
 
                 return edges 
@@ -277,7 +249,7 @@ class autonomy(object):
                # polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
 
                # cv2.fillPoly(mask, polygon, 255)
-                polygon = np.array([[(0, height * 1 /2), (width, height * 1 / 2), (width, height), (0, height), ]], np.int32)
+                polygon = np.array([[(0, height * 9 /20), (width, height * 9 / 20), (width, height), (0, height), ]], np.int32)
 
                 cv2.fillPoly(mask, polygon, 255)
 
@@ -299,7 +271,7 @@ class autonomy(object):
                 height, width, _ = frame.shape
                 slope, intercept = line
                 y1 = height  # bottom of the frame
-                y2 = int(y1 * 1 / 2)  # make points from middle of the frame down
+                y2 = int(y1 * 9 / 20)  # make points from middle of the frame down
                
                 if slope is 0:
                     x1 = 0
@@ -322,14 +294,6 @@ class autonomy(object):
                 else:
                     x2 = max(-width, min(2 * width, int(x2)))
 
-                
-              #  print "%f %f" % (intercept, slope)
-              #  # bound the coordinates within the frame
-              #  x1 = max(-width, min(2 * width, int((y1 - intercept) / slope)))
-              #  x2 = max(-width, min(2 * width, int((y2 - intercept) / slope)))
-                
-                #print "x1 y1 x2 y2 %d %d %d %d " % (x1, y1, x2, y2)
-                
                 return [[x1, y1, x2, y2]]
 
 
@@ -402,28 +366,7 @@ class autonomy(object):
 		#rospy.loginfo(servoMsg)
 		self.servoPub.publish(servoMsg)
 
-
-        # Calculate robot position (delta_x, delta_z) in ground frame ( based on the tag)
-        # Calculate target position (0,0,0.8) in robot frame, return in polar coordinates (rho, phi)
-        def frame_transformation(self, destination, trans_xz, rot_z):
-                theta = -108.9 * rot_z - 0.9179  # calculate the angle between two frames (degree)
-                theta = math.radians(theta)  # convert the angle into radians
-                print(theta)
-                # Rotation matrix
-                rotation_Rri_matrix = np.array([(math.cos(theta), -math.sin(theta)),(math.sin(theta), math.cos(theta))])
-                rotation_Rir_matrix = np.array([(math.cos(theta), math.sin(theta)),(-math.sin(theta), math.cos(theta))])
-                
-                destination = np.array(destination)
-                destination_coordinate = rotation_Rri_matrix.dot(destination) + np.array([[trans_xz[0]], [trans_xz[1]]])
-                robot_position = rotation_Rir_matrix.dot(np.array([[-trans_xz[0]],[-trans_xz[1]]]))
-                rho = np.sqrt(destination_coordinate[0]**2 + destination_coordinate[1]**2)
-                phi = np.arctan2(destination_coordinate[1], destination_coordinate[0])
-                if math.degrees(phi) < 180 and math.degrees(phi) > 0: 
-                    return float(rho), math.degrees(phi) - 90, robot_position[0], robot_position[1]
-                else:
-                    return -float(rho), math.degrees(phi) + 90, robot_position[0], robot_position[1]
-
-        
+        # Used to climb the hill
         def CrossHill(self, speed, t):
             start = time.time()
             while (time.time() - start) < t: # Speed up for 0.3 seconds to climb the hill
@@ -432,20 +375,7 @@ class autonomy(object):
                 self.publishMotors()
                 self.rate.sleep()
 
-
-        def TurnAround(self):
-            if self.reverseNum == 0:
-                start = time.time()
-                while (time.time() - start) < 0.3: # Turn 180 degrees around
-                    self.leftSpeed = -0.4
-                    self.rightSpeed = 0.4
-                    self.publishMotors()
-                    self.rate.sleep() 
-                self.reverseNum = 1
-            self.leftSpeed = 0
-            self.rightSpeed = 0
-            self.publishMotors()
-
+        # Use lower bound and upper bound to limit the speed
         def LimitSpeed(self, speed_lower_bound, speed_upper_bound):
 
             if self.leftSpeed > 0:
@@ -466,7 +396,7 @@ class autonomy(object):
             if self.rightSpeed < -speed_upper_bound:
                 self.rightSpeed = -speed_upper_bound 
 
-
+        # Stop the car for t seconds
         def Stop(self, t):
             start = time.time()
             while (time.time() - start) < t: # stop for a while
@@ -475,6 +405,7 @@ class autonomy(object):
                 self.publishMotors()
                 self.rate.sleep()
         
+        # Drive wheels at a certain spped within a certain time
         def DriveMotors(self, left_speed, right_speed, t):
             start = time.time()
             while (time.time() - start) < t: # stop for a while
@@ -494,54 +425,34 @@ class autonomy(object):
                 timeDetectTunnel = 0
                 while not rospy.is_shutdown():
                     currTime = time.time()
-                    self.laneFollow = True 
-                    
-                    
-                   # if self.isArUcoDetect: # check if any ArUco is detected
-                   #     self.Stop(0.1) 
-                   #     self.laneFollow = False # close lane folloer function
+                    # Allow lane follow function
+                    self.laneFollow = True  
 
-                   #     # Hill Obstacle
-                   #     if 3 in self.arucoId: # check whether ArUco 3 is detected
-                   #         self.CrossHill(self.numLaneDetect) # call CrossHill function
-                   #         self.isArUcoDetect = False 
-                   #         self.arucoId = []
-                    # Hill
-                    if self.isHill > 0 and self.isHill < 0.75:
-                        self.Stop(0.1)
-                        self.CrossHill(0.5, 1.1)
-                        self.Stop(0.1)
-                       # while self.numLaneDetect is 0:
-                       #     self.leftSpeed = 0.22
-                       #     self.rightSpeed = 0.24
-                       #     self.publishMotors()
-                       #     self.rate.sleep
+                    # Hill Obstacle
+                    # Check whether whether there is marker 6 and within a certain distance
+                    if self.isHill and self.isHill < 0.4:
+                        # Drive the car slowly to foot of the hill
+                        self.DriveMotors(0.18,0.18,1.2)
+                        self.Stop(0.2)
+                        # Speed up to cross the hill
+                        self.CrossHill(0.5, 0.9)
                         self.Stop(0.1)
                         self.isHill = 0
 
                     # U Turn 
+                    # Check whether whether there is marker 6 and within a certain distance
                     if self.isReverse and self.isReverse < 0.5:
                         self.Stop(0.2)
                         self.DriveMotors(0.35,-0.35,1.3)
                         self.Stop(0.2)
-                       # while self.leftSlope > 45 or self.rightSlope < -4.5:
-                       #     self.leftSpeed = 0.24
-                       #     self.rightSpeed = -0.24
-                       #     self.publishMotors()
-                       #     self.rate.sleep
+                        while self.leftSlope > 45 or self.rightSlope < -4.5:
+                            self.leftSpeed = 0.24
+                            self.rightSpeed = -0.24
+                            self.publishMotors()
+                            self.rate.sleep
 
                         self.isReverse = 0
-                       # self.timeDetectReverse = currTime 
-                       # self.laneFollow = False 
-                       # while self.numLaneDetect != 2 or (time.time() - self.timeDetectReverse)<0.6:
-                       #     self.leftSpeed = -0.3
-                       #     self.rightSpeed = 0.25
-                       #     self.publishMotors()
-                       #     self.rate.sleep()
-                       # self.leftSpeed = 0
-                       # self.rightSpeed = 0
-                       # self.publishMotors()
-                       # self.isReverse = 0
+
                         
                     # Parking
                     if self.isParking:
@@ -570,7 +481,7 @@ class autonomy(object):
                                 steering_speed = 0.05
                             self.leftSpeed = forward_speed + steering_speed
                             self.rightSpeed = forward_speed - steering_speed 
-                            self.LimitSpeed(0.1, 0.22)
+                            self.LimitSpeed(0.8, 0.2)
                             self.publishMotors()
 
                         else:
@@ -587,28 +498,29 @@ class autonomy(object):
                        # if timeDetectTunnel is 0:
                        #     timeDetectTunnel = time.time()
                        #     self.Stop(1)
-                        self.DriveMotors(0.2,0.2,4)
-                        distance2Wall = 0.5
+                        self.DriveMotors(0.2,0.2,0.6)
+                        self.Stop(0.3)
+                        distance2Wall = 0.4
                         startTurnning = 0
                         while self.isTunnel:
                             if self.distance < distance2Wall:
                                 #self.leftSpeed = 0.23
                                 #self.rightSpeed = -0.25
                                 #print "turn "
-                                self.DriveMotors(0.2, -0.35, 0.21)
+                                self.DriveMotors(0.16, -0.3, 0.18)
                                 startTurnning += 1
                             else:
                                 #self.leftSpeed = 0.17
                                 #self.rightSpeed = 0.17
-                                self.DriveMotors(0.2,0.2,0.28) 
+                                self.DriveMotors(0.2,0.2,0.16) 
                             #self.publishMotors()
                             
-                            self.Stop(0.05)
+                            self.Stop(0.2)
                             if startTurnning > 2:
-                                distance2Wall = 0.4
-                                if self.distance > 0.5:
+                                distance2Wall = 0.5
+                                if self.distance > 0.3:
                                     self.isTunnel = 0
-                        self.DriveMotors(0.2,0.2,2.5)
+                        self.DriveMotors(0.2,0.2,1.6)
                    
                    
                    # if self.leftSlope > 50 and self.rightSlope < -50:
@@ -655,11 +567,11 @@ class autonomy(object):
                         ## ********** Config paremeter ******** 
                         kp = 0.002
                         ki = 0.002
-                        kd = 0.00
+                        kd = 0.0008
                         ## ************************************                      
                         
                         if self.numLaneDetect == 1:
-                            if self.leftSlope > 45 or self.rightSlope < -45:
+                            if self.leftSlope > 50 or self.rightSlope < -50:
                                 if stopBeforeTurn > 3:
                                     start =time.time()
                                     while (time.time() - start) < 0.1: # stop for a while
@@ -669,8 +581,8 @@ class autonomy(object):
                                         self.rate.sleep()
                                 stopBeforeTurn = 0
                                 kp = 0.0022
-                                forward_speed = -0.025
-                                max_angle_deviation = 0.26
+                                forward_speed = -0.02
+                                max_angle_deviation = 0.25
                             else:
                                 forward_speed = 0.12
                                 max_angle_deviation = 0.05
@@ -683,7 +595,7 @@ class autonomy(object):
                         
                         if abs(angleDegAvg) > 55:
                             sum_angle = sum_angle + angleDegAvg * 0.01
-                            sum_angle = min(sum_angle, 25)
+                            sum_angle = min(sum_angle, 20)
                         else:
                             sum_angle = 0
                         #print(sum_angle)
