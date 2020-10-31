@@ -16,11 +16,4 @@ Run the testing script (not actuating the motors).
 cd ./launch
 roslaunch autonomy tester.launch
 ```
-List rostopic
-```
-rostopic list
-```
-Display ultrasonic sensor's feedback value (0-1).
-```
-rostopic echo /distance
-```
+
